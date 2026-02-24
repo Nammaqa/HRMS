@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "LeaveBalance" ADD COLUMN     "bereavementLeave" DOUBLE PRECISION NOT NULL DEFAULT 5.0,
+ADD COLUMN     "paternityLeave" DOUBLE PRECISION NOT NULL DEFAULT 5.0;

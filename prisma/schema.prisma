@@ -1,0 +1,423 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// generator client {
+//   provider = "prisma-client-js"
+// }
+
+// datasource db {
+//   provider = "postgresql"
+//   url      = env("DATABASE_URL")
+// }
+
+// model User {
+//   id              String   @id @default(cuid())
+//   name            String
+//   email           String   @unique
+//   password        String
+//   role            String   @default("user")
+//   createdAt       DateTime @default(now())
+//   profileImageUrl String?
+// }
+// ==============================
+// PRISMA CONFIG
+// ==============================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgres"
+  url      = env("DATABASE_URL")
+}
+
+// ==============================
+// USER & ROLE MANAGEMENT
+// ==============================
+
+model User {
+  id       Int    @id @default(autoincrement())
+  name     String
+  email    String @unique
+  password String
+  role     Role
+
+  // Personal Information
+  firstName       String?
+  middleName      String?
+  lastName        String?
+  phone           String?
+  profileImageUrl String? // Cloudinary URL
+  designation     String? // Job title
+  bloodGroup      String? // Blood group (A+, B-, O+, etc.)
+  location        String? // Office location
+  dateOfBirth     DateTime? // Date of birth
+  gender          String? // Male, Female, Other
+  maritalStatus   String? // Single, Married, etc.
+  dateOfMarriage  DateTime?
+  fatherName      String? // Father's name
+  motherName      String? // Mother's name
+
+  // Contact Information
+  alternateContact String?
+  emergencyContact String?
+  personalEmail    String?
+  currentAddress   String?
+  permanentAddress String?
+
+  // Company Information
+  employeeId           String?   @unique // Employee ID
+  projectClient        String? // Project/Client Working
+  designationAtCompany String?
+  dateOfJoining        DateTime?
+  dateOfDeployment     DateTime?
+  totalExperience      Float? // Years of experience
+  dateOfExit           DateTime?
+
+  // Education
+  masterDegree     String? // Degree name
+  masterYOP        Int? // Year of Passing
+  masterPercentage Float?
+
+  secondaryDegree     String? // Diploma/Bachelor
+  secondaryYOP        Int?
+  secondaryPercentage Float?
+
+  twelfthDegree     String? // 12th/Diploma
+  twelfthYOP        Int?
+  twelfthPercentage Float?
+
+  tenthDegree     String? // 10th
+  tenthYOP        Int?
+  tenthPercentage Float?
+
+  // Identification
+  aadharNumber String?
+  panCard      String?
+  citizenship  String?
+
+  // Bank Details
+  bankHolderName    String?
+  bankName          String?
+  bankAccountNumber String?
+  ifscCode          String?
+  bankBranch        String?
+
+  // Government IDs
+  uanNumber String?
+  pfNumber  String?
+
+  // Assets & Provisions
+  laptopProvider String? // Wizzybox or Client
+  assetDetails   String?
+  idCardProvided Boolean @default(false)
+  bgvProvided    Boolean @default(false)
+
+  // Previous Employment
+  previousCompany String?
+
+  // Metadata
+  lastLoginAt DateTime?
+  photoUrl    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  attendances               Attendance[]
+  leaveRequests             LeaveRequest[]
+  wfhRequests               WFHRequest[]
+  weekendHolidayAttendances WeekendHolidayAttendance[]
+  leaveBalance              LeaveBalance?
+  auditLogs                 AuditLog[]                 @relation("AdminActions")
+  notifications             Notification[]
+}
+
+// ==============================
+// NOTIFICATION MANAGEMENT
+// ==============================
+
+model Notification {
+  id     Int  @id @default(autoincrement())
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title   String
+  message String
+  type    NotificationType @default(GENERAL)
+  icon    String? // Icon emoji or name
+  isRead  Boolean          @default(false)
+  readAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ==============================
+// ATTENDANCE
+// ==============================
+
+model Attendance {
+  id     Int  @id @default(autoincrement())
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  date       DateTime
+  loginTime  DateTime?
+  logoutTime DateTime?
+
+  loginLatitude   Float?
+  loginLongitude  Float?
+  logoutLatitude  Float?
+  logoutLongitude Float?
+
+  totalWorkingHours Float? // Total hours worked in decimal (e.g., 9.5 for 9 hours 30 minutes)
+
+  status AttendanceStatus
+  shift  ShiftType
+
+  isManual Boolean @default(false) // Admin override
+  remarks  String?
+
+  // Cron reminder flags
+  morningReminderSent Boolean @default(false)
+  eveningReminderSent Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
+}
+
+// ==============================
+// LEAVE MANAGEMENT
+// ==============================
+
+model LeaveRequest {
+  id     Int  @id @default(autoincrement())
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  leaveType LeaveType
+  startDate DateTime
+  endDate   DateTime
+  totalDays Int
+
+  reason        String?
+  remarks       String?
+  attachmentUrl String? // Cloudinary URL
+
+  status ApprovalStatus
+
+  // Cron notification flag
+  notificationSent Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ==============================
+// WORK FROM HOME (WFH)
+// ==============================
+
+model WFHRequest {
+  id     Int  @id @default(autoincrement())
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  date    DateTime
+  inTime  DateTime?
+  outTime DateTime?
+
+  description   String?
+  remarks       String?
+  attachmentUrl String? // Cloudinary URL
+
+  status ApprovalStatus
+
+  // Cron notification flag
+  notificationSent Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ==============================
+// LEAVE BALANCE (ADMIN CONTROL)
+// ==============================
+
+model LeaveBalance {
+  id     Int  @id @default(autoincrement())
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [id])
+
+  // Current Year Balances
+  earnedLeave      Float @default(0) // Monthly +1.25 accrual, max 30 days total (carry forward: max 10 days within 30-day limit)
+  sickLeave        Float @default(5.0) // 5 days per year, resets Jan 1
+  specialLeave     Float @default(1.0) // 1 day per year, resets Jan 1
+  bereavementLeave Float @default(5.0) // 5 days per year for bereavement, resets Jan 1
+  paternityLeave   Float @default(5.0) // 5 days per year for paternity, resets Jan 1
+  lossOfPayDays    Float @default(0) // Unlimited LOP, no reset
+  compact          Float @default(0) // Comp-off from weekend/holiday work, resets Jan 1
+
+  // Monthly Tracking
+  currentYear     Int       @default(2026) // Year of accrual
+  lastAccrualDate DateTime? // Last date accrual was applied
+
+  // Track if leave was taken in current month (for accrual)
+  leaveUsedInMonth Boolean @default(false)
+
+  updatedAt DateTime @updatedAt
+}
+
+// ==============================
+// HOLIDAY MANAGEMENT
+// ==============================
+// NOTE:
+// - Sundays are DEFAULT holidays (not stored)
+// - Only admin-defined holidays are stored here
+
+model Holiday {
+  id          Int         @id @default(autoincrement())
+  date        DateTime    @unique
+  name        String
+  type        HolidayType
+  description String?
+
+  createdBy String // admin userId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ==============================
+// WEEKEND/HOLIDAY ATTENDANCE APPROVAL
+// ==============================
+
+model WeekendHolidayAttendance {
+  id     Int  @id @default(autoincrement())
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  date        DateTime // Date of weekend/holiday attendance
+  dayType     String // "SUNDAY", "SATURDAY", "HOLIDAY"
+  holidayName String? // Holiday name if applicable
+
+  loginTime  DateTime
+  logoutTime DateTime?
+
+  loginLatitude   Float?
+  loginLongitude  Float?
+  logoutLatitude  Float?
+  logoutLongitude Float?
+
+  totalWorkingHours Float? // Total hours worked
+
+  status         ApprovalStatus @default(PENDING)
+  approvalReason String? // Reason for approval/rejection
+  approvedBy     String? // Admin userId who approved
+  approvedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([status])
+  @@index([userId])
+}
+
+// ==============================
+// AUDIT LOG (ADMIN ACTIONS)
+// ==============================
+
+model AuditLog {
+  id      Int     @id @default(autoincrement())
+  adminId Int?
+  admin   User?   @relation("AdminActions", fields: [adminId], references: [id])
+
+  action      String
+  entityType  String
+  entityId    String?
+  description String?
+
+  createdAt DateTime @default(now())
+}
+
+// ==============================
+// CRON EXECUTION AUDIT
+// ==============================
+
+model CronExecution {
+  id           Int      @id @default(autoincrement())
+  cronName     String
+  status       String
+  startedAt    DateTime @default(now())
+  finishedAt   DateTime?
+  totalUsers   Int      @default(0)
+  successCount Int      @default(0)
+  skippedCount Int      @default(0)
+  failedCount  Int      @default(0)
+  message      String?
+
+  createdAt DateTime @default(now())
+}
+
+// ==============================
+// ENUMS
+// ==============================
+
+enum Role {
+  admin
+  employee
+  intern
+}
+
+enum AttendanceStatus {
+  FULL_DAY
+  HALF_DAY_FIRST
+  HALF_DAY_SECOND
+  ABSENT
+  LEAVE
+  WFH
+  HOLIDAY
+}
+
+enum ShiftType {
+  FIRST_HALF
+  SECOND_HALF
+  NONE
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LeaveType {
+  EARNED
+  SICK
+  SPECIAL
+  BEREAVEMENT
+  PATERNITY
+  ELECTION
+  COMPACT
+  LOSS_OF_PAY
+}
+
+enum HolidayType {
+  NATIONAL
+  FESTIVAL
+  COMPANY
+  OPTIONAL
+}
+
+enum NotificationType {
+  GENERAL
+  ALERT
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}

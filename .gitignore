@@ -1,0 +1,26 @@
+# dependencies
+node_modules/
+
+# build outputs
+.next/
+out/
+build/
+
+# environment files
+.env
+.env.*
+.env.local
+.env.*.local
+
+# logs
+*.log
+
+# system files
+.DS_Store
+
+# editor directories
+.vscode/
+
+# nextjs
+.vercel/
+```
