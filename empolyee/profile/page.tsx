@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, X } from "lucide-react";
+import { Upload, X, Eye, EyeOff } from "lucide-react";
 
 interface UserProfile {
   id: string;
@@ -23,6 +23,10 @@ export default function Profile() {
   const [message, setMessage] = useState("");
   const [uploading, setUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -96,11 +100,21 @@ export default function Profile() {
     e.preventDefault();
     if (!formData) return;
 
+    if (newPassword || confirmPassword) {
+      if (newPassword !== confirmPassword) {
+        setMessage("❌ Passwords do not match");
+        return;
+      }
+    }
+
     try {
+      const payload: any = { ...formData };
+      if (newPassword) payload.password = newPassword;
+
       const response = await fetch("/api/auth/update-profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
@@ -110,6 +124,10 @@ export default function Profile() {
         setFormData(userData);
         setPreviewImage(null);
         setEditing(false);
+        setNewPassword("");
+        setConfirmPassword("");
+        setShowPassword(false);
+        setShowConfirm(false);
         setMessage("✅ Profile updated successfully!");
         setTimeout(() => setMessage(""), 3000);
       } else {
@@ -323,6 +341,39 @@ export default function Profile() {
                 onChange={handleInputChange}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2"
               />
+            </div>
+            {/* Password fields */}
+            <div className="relative">
+              <label className="block text-gray-600 font-semibold mb-2">New Password</label>
+              <input
+                type={showPassword ? "text" : "password"}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-9 text-gray-500"
+                onClick={() => setShowPassword((s) => !s)}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            <div className="relative">
+              <label className="block text-gray-600 font-semibold mb-2">Confirm Password</label>
+              <input
+                type={showConfirm ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-9 text-gray-500"
+                onClick={() => setShowConfirm((s) => !s)}
+              >
+                {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
 
             <div className="flex gap-4 pt-4">

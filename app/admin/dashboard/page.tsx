@@ -19,12 +19,20 @@ interface RecentActivity {
   time: string;
 }
 
-interface Birthday {
+
+// mirror the types used by TodaysSpecial
+interface SpecialOccasion {
   id: string;
   name: string;
   designation: string;
-  dateOfBirth: string;
+  type: "birthday" | "anniversary" | "joining";
+  displayDate: string;
   profileImageUrl?: string;
+}
+interface SpecialOccasions {
+  yesterday: SpecialOccasion[];
+  today: SpecialOccasion[];
+  tomorrow: SpecialOccasion[];
 }
 
 export default function AdminDashboard() {
@@ -41,7 +49,12 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [birthdays, setBirthdays] = useState<Birthday[]>([]);
+  // birthdays no longer needed; we use specialOccasions API
+  const [specialOccasions, setSpecialOccasions] = useState<SpecialOccasions>({
+    yesterday: [],
+    today: [],
+    tomorrow: [],
+  });
 
   useEffect(() => {
     fetchDashboardData();
@@ -82,23 +95,16 @@ export default function AdminDashboard() {
         { id: "5", name: "Tom Brown", action: "Applied for WFH", time: "Yesterday" },
       ]);
 
-      // Fetch all employees with birthdays
+      // Fetch special occasions (yesterday/today/tomorrow) using the same API as employee dashboard
       try {
-        const birthdaysResponse = await fetch("/api/employee-dashboard", {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-        });
-
-        if (birthdaysResponse.ok) {
-          const birthdaysData = await birthdaysResponse.json();
-          if (birthdaysData.data?.birthdays) {
-            setBirthdays(birthdaysData.data.birthdays);
-          }
+        const res = await fetch("/api/todayspecial");
+        if (res.ok) {
+          const data = await res.json();
+          setSpecialOccasions(data);
         }
       } catch (err) {
-        console.error("Error fetching birthdays:", err);
-        // Don't fail the whole dashboard if birthdays fail to load
+        console.error("Error fetching special occasions:", err);
+        // continue, component will show empty state if needed
       }
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
@@ -288,20 +294,7 @@ export default function AdminDashboard() {
 
               {/* Today's Special Section */}
               <div className="mb-8">
-                <TodaysSpecial 
-                  occasions={{ 
-                    yesterday: [], 
-                    today: birthdays.map(b => ({
-                      id: b.id,
-                      name: b.name,
-                      designation: b.designation,
-                      type: "birthday" as const,
-                      displayDate: b.dateOfBirth,
-                      profileImageUrl: b.profileImageUrl
-                    })), 
-                    tomorrow: [] 
-                  }} 
-                />
+                <TodaysSpecial occasions={specialOccasions} />
               </div>
 
               {/* Recent Activity */}

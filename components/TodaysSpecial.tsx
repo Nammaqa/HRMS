@@ -6,7 +6,8 @@ interface SpecialOccasion {
   id: string;
   name: string;
   designation: string;
-  type: "birthday" | "anniversary";
+  // joining is used for work anniversaries (date of joining)
+  type: "birthday" | "anniversary" | "joining";
   displayDate: string;
   profileImageUrl?: string;
 }
@@ -142,13 +143,33 @@ export const TodaysSpecial: React.FC<TodaysSpecialProps> = ({
 /* ---------- Simple Card ---------- */
 
 const SimpleCard = ({ occasion }: { occasion: SpecialOccasion }) => {
-  const isBirthday = occasion.type === "birthday";
   const initials = occasion.name
     .split(" ")
     .map((w) => w[0])
     .join("")
     .slice(0, 2)
     .toUpperCase();
+
+  // compute label and style based on type
+  let labelText = "";
+  let labelClass = "";
+  switch (occasion.type) {
+    case "birthday":
+      labelText = "🎂 Birthday";
+      labelClass = "bg-amber-100 text-amber-800";
+      break;
+    case "anniversary":
+      labelText = "💍 Anniversary";
+      labelClass = "bg-rose-100 text-rose-800";
+      break;
+    case "joining":
+      labelText = "🎊 Work Anniversary";
+      labelClass = "bg-green-100 text-green-800";
+      break;
+    default:
+      labelText = occasion.displayDate;
+      labelClass = "bg-gray-100 text-gray-800";
+  }
 
   return (
     <div className="rounded-xl border bg-white p-4 shadow-sm hover:shadow-md transition">
@@ -177,14 +198,8 @@ const SimpleCard = ({ occasion }: { occasion: SpecialOccasion }) => {
       </div>
 
       <div className="flex items-center justify-between">
-        <span
-          className={`rounded-full px-3 py-1 text-xs font-medium ${
-            isBirthday
-              ? "bg-amber-100 text-amber-800"
-              : "bg-rose-100 text-rose-800"
-          }`}
-        >
-          {isBirthday ? "🎂 Birthday" : "💍 Anniversary"}
+        <span className={`rounded-full px-3 py-1 text-xs font-medium ${labelClass}`}>
+          {labelText}
         </span>
 
         <button className="h-8 w-8 rounded-full border bg-white hover:bg-gray-50">
