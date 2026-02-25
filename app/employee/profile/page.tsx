@@ -21,6 +21,9 @@ import {
   Edit2,
   Save,
   X,
+  Upload,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 interface UserProfile {
@@ -172,6 +175,16 @@ export default function EmployeeProfile() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  // image upload state
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  // password fields
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   useEffect(() => {
     fetchProfile();
   }, []);
@@ -198,6 +211,41 @@ export default function EmployeeProfile() {
     }
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // preview
+    const reader = new FileReader();
+    reader.onload = (ev) => setPreviewImage(ev.target?.result as string);
+    reader.readAsDataURL(file);
+
+    setUploading(true);
+    try {
+      const uploadFormData = new FormData();
+      uploadFormData.append("file", file);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: uploadFormData,
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setEditData((prev) => ({ ...prev, profileImageUrl: result.secure_url }));
+        setMessage({ type: "success", text: "✅ Image uploaded successfully!" });
+        setTimeout(() => setMessage(null), 3000);
+      } else {
+        setMessage({ type: "error", text: " Failed to upload image" });
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      setMessage({ type: "error", text: " Error uploading image" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleEditChange = (key: string, value: any) => {
     setEditData((prev) => ({
       ...prev,
@@ -206,22 +254,43 @@ export default function EmployeeProfile() {
   };
 
   const handleSave = async () => {
+    // password validation
+    if (newPassword || confirmPassword) {
+      if (newPassword !== confirmPassword) {
+        setMessage({ type: "error", text: "Passwords do not match" });
+        return;
+      }
+    }
+
     setIsSaving(true);
     setMessage(null);
     try {
+      // build payload from current editData and possible password
+      const payload: any = { ...editData };
+      if (newPassword) {
+        payload.password = newPassword;
+      }
+
       const response = await fetch("/api/auth/update-profile", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(editData),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
         const updated = await response.json();
         setProfile(updated);
         setIsEditing(false);
+        // clear password states
+        setNewPassword("");
+        setConfirmPassword("");
+        setShowPassword(false);
+        setShowConfirmPassword(false);
+        // clear preview
+        setPreviewImage(null);
         setMessage({ type: "success", text: "Profile updated successfully!" });
         setTimeout(() => setMessage(null), 3000);
       } else {
@@ -239,6 +308,11 @@ export default function EmployeeProfile() {
     setEditData(profile || {});
     setIsEditing(false);
     setMessage(null);
+    setPreviewImage(null);
+    setNewPassword("");
+    setConfirmPassword("");
+    setShowPassword(false);
+    setShowConfirmPassword(false);
   };
 
   const formatDate = (date: string | undefined) => {
@@ -319,11 +393,33 @@ export default function EmployeeProfile() {
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl shadow-xl p-8 mb-8 text-white flex items-center justify-between">
             <div className="flex items-center gap-6">
-              <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center text-4xl font-bold">
-                {profile.profileImageUrl ? (
-                  <img src={profile.profileImageUrl} alt={profile.name} className="w-full h-full rounded-full object-cover" />
+              <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center text-4xl font-bold relative">
+                {/* show preview if available during edit, otherwise saved image or initial */}
+                {previewImage || editData.profileImageUrl || profile.profileImageUrl ? (
+                  <img
+                    src={previewImage || editData.profileImageUrl || profile.profileImageUrl!}
+                    alt={profile.name}
+                    className="w-full h-full rounded-full object-cover"
+                  />
                 ) : (
                   profile.name?.charAt(0).toUpperCase()
+                )}
+
+                {isEditing && (
+                  <label className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full cursor-pointer">
+                    {uploading ? (
+                      <span className="text-white text-sm">Uploading...</span>
+                    ) : (
+                      <Upload size={20} className="text-white" />
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      disabled={uploading}
+                      className="hidden"
+                    />
+                  </label>
                 )}
               </div>
               <div>
@@ -366,6 +462,49 @@ export default function EmployeeProfile() {
               {/* Edit Profile button removed for employee view */}
             </div>
           </div>
+
+          {/* Password Change (only visible when editing) */}
+          {isEditing && (
+            <div className="mb-8 bg-white rounded-xl shadow-md p-6 border border-gray-100">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Change Password</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="relative">
+                  <label className="block text-gray-600 font-semibold mb-2">New Password</label>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                    placeholder="Enter new password"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-9 text-gray-500"
+                    onClick={() => setShowPassword((s) => !s)}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                <div className="relative">
+                  <label className="block text-gray-600 font-semibold mb-2">Confirm Password</label>
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                    placeholder="Re-enter password"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-9 text-gray-500"
+                    onClick={() => setShowConfirmPassword((s) => !s)}
+                  >
+                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Personal Information */}
           <div className="mb-8">

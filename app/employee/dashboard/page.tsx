@@ -70,8 +70,10 @@ interface SpecialOccasion {
 }
 
 interface SpecialOccasions {
+  yesterday: SpecialOccasion[];
   today: SpecialOccasion[];
-  thisMonth: SpecialOccasion[];
+  tomorrow: SpecialOccasion[];
+  // thisMonth is kept only if other code uses it elsewhere
 }
 
 /* -------------------- Component -------------------- */
@@ -91,8 +93,9 @@ export default function EmployeeDashboard() {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [leaves, setLeaves] = useState<Leave[]>([]);
   const [specialOccasions, setSpecialOccasions] = useState<SpecialOccasions>({
+    yesterday: [],
     today: [],
-    thisMonth: [],
+    tomorrow: [],
   });
 
   // Filter holidays to only those in the current month
@@ -281,7 +284,8 @@ export default function EmployeeDashboard() {
                 </div>
               </div>
 
-              <TodaysSpecial occasions={{ yesterday: [], today: specialOccasions.today, tomorrow: [] }} />
+              {/* pass full object returned from API so tabs work */}
+              <TodaysSpecial occasions={specialOccasions} />
             </div>
 
             <div className="md:col-span-3">

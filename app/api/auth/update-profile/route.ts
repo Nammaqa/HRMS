@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/jwt";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
 export async function POST(request: NextRequest) {
   try {
@@ -60,6 +61,11 @@ export async function POST(request: NextRequest) {
       if (typeof value === "string" && value.trim() === "") return;
 
       let finalValue: any = value;
+
+      // handle password separately: hash it
+      if (key === "password" && typeof value === "string") {
+        finalValue = bcrypt.hashSync(value, 10);
+      }
 
       // convert to Date for known date fields
       if (dateFields.includes(key) && typeof value === "string") {
