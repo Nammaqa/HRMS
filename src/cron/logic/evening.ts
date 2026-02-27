@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { getDay, startOfDay, endOfDay } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
+import { sendMail } from "../../utils/mailer";  // corrected path
 
 interface ExecutionSummary {
   totalUsers: number;
@@ -116,6 +117,17 @@ export async function executeEveningReminder(
           });
         });
 
+        // Send email to company email
+        if (attendance.user.email) {
+          await sendMail({
+            to: attendance.user.email,
+            subject: "Evening Reminder - Don't Forget to Check Out",
+            text: "Don't forget to check out before leaving office.",
+          }).catch((err) =>
+            console.error(`Email failed for ${attendance.userId}:`, err)
+          );
+        }
+
         summary.successCount++;
       } catch (error) {
         summary.failedCount++;
@@ -172,6 +184,17 @@ export async function executeEveningReminder(
           });
         });
 
+        // Send email to company email
+        if (leave.user.email) {
+          const statusText =
+            leave.status === "APPROVED" ? "approved" : "rejected";
+          await sendMail({
+            to: leave.user.email,
+            subject: `Leave Request ${leave.status}`,
+            text: `Your ${leave.leaveType.toLowerCase()} leave request has been ${statusText}.`,
+          }).catch((err) => console.error(`Email failed for ${leave.userId}:`, err));
+        }
+
         summary.successCount++;
       } catch (error) {
         summary.failedCount++;
@@ -227,6 +250,17 @@ export async function executeEveningReminder(
             },
           });
         });
+
+        // Send email to company email
+        if (wfh.user.email) {
+          const statusText =
+            wfh.status === "APPROVED" ? "approved" : "rejected";
+          await sendMail({
+            to: wfh.user.email,
+            subject: `Work from Home (WFH) Request ${wfh.status}`,
+            text: `Your Work from Home request has been ${statusText}.`,
+          }).catch((err) => console.error(`Email failed for ${wfh.userId}:`, err));
+        }
 
         summary.successCount++;
       } catch (error) {
