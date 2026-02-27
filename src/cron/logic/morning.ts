@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { addDays, getDay, startOfDay, endOfDay } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
+import { sendMail } from "../../utils/mailer";  // corrected path
 
 interface ExecutionSummary {
   totalUsers: number;
@@ -128,6 +129,17 @@ export async function executeMorningReminder(
           });
         });
 
+        // Send email to company email
+        if (attendance.user.email) {
+          await sendMail({
+            to: attendance.user.email,
+            subject: "Morning Reminder - Check In",
+            text: "Good morning! Don't forget to check in for the day.",
+          }).catch((err) =>
+            console.error(`Email failed for ${attendance.userId}:`, err)
+          );
+        }
+
         summary.successCount++;
       } catch (error) {
         summary.failedCount++;
@@ -179,6 +191,15 @@ export async function executeMorningReminder(
           });
         });
 
+        // Send email to company email
+        if (user.email) {
+          await sendMail({
+            to: user.email,
+            subject: "Morning Reminder - Check In",
+            text: "Good morning! Don't forget to check in for the day.",
+          }).catch((err) => console.error(`Email failed for ${user.id}:`, err));
+        }
+
         summary.successCount++;
       } catch (error) {
         summary.failedCount++;
@@ -193,3 +214,6 @@ export async function executeMorningReminder(
     return summary;
   }
 }
+
+
+// test
