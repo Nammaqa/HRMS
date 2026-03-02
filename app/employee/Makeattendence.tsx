@@ -353,7 +353,7 @@ export function MarkAttendanceModal({
     } catch (error) {
       console.error("Check-out exception:", error);
       alert(
-        `Error: ${error instanceof Error ? error.message : "Unable to complete check-out"}`
+        `Error: ${error instanceof Error ? error.message : "Unable to complete check-out plz check the connection and location and try again"}`
       );
     } finally {
       setIsLoading(false);
