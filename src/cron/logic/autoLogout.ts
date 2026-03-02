@@ -1,7 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { setHours, setMinutes, setSeconds, startOfDay, endOfDay, subDays } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
-import { sendMail } from "../../utils/mailer";  // corrected path to utils folder (up two levels) 
+import { sendMail } from "../../utils/mailer";  // corrected path to utils folder (up two levels)
+import { getAutoLogoutWarningTemplate } from "../../utils/emailTemplates"; 
 
 interface ExecutionSummary {
   totalUsers: number;
@@ -174,8 +175,8 @@ export async function executeAutoLogout(
         if (attendance.user.email) {
           await sendMail({
             to: attendance.user.email,
-            subject: "Auto Logout Notice - Action Required",
-            text: `You were automatically logged out at 11:59 PM because you did not logout manually. Kindly logout on time in future – failure to do so will result in a 0.25 EL deduction.`,
+            subject: "Auto Logout Notice - EL Deduction Warning",
+            html: getAutoLogoutWarningTemplate(),
           }).catch((err) =>
             console.error(`Email failed for auto-logout to ${attendance.userId}:`, err)
           );
