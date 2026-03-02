@@ -2,6 +2,11 @@ import { PrismaClient } from "@prisma/client";
 import { getDay, startOfDay, endOfDay } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { sendMail } from "../../utils/mailer";  // corrected path
+import { 
+  getEveningLogoutReminderTemplate,
+  getLeaveApprovalTemplate,
+  type LeaveApprovalData 
+} from "../../utils/emailTemplates";
 
 interface ExecutionSummary {
   totalUsers: number;
@@ -96,7 +101,7 @@ export async function executeEveningReminder(
               title: "Evening Reminder",
               message: "Don't forget to check out before leaving office.",
               type: "ALERT",
-              icon: "🌙",
+              icon: "",
             },
           });
 
@@ -121,8 +126,8 @@ export async function executeEveningReminder(
         if (attendance.user.email) {
           await sendMail({
             to: attendance.user.email,
-            subject: "Evening Reminder - Don't Forget to Check Out",
-            text: "Don't forget to check out before leaving office.",
+            subject: "Evening Reminder - Time to Log Out",
+            html: getEveningLogoutReminderTemplate(),
           }).catch((err) =>
             console.error(`Email failed for ${attendance.userId}:`, err)
           );
@@ -186,12 +191,21 @@ export async function executeEveningReminder(
 
         // Send email to company email
         if (leave.user.email) {
-          const statusText =
-            leave.status === "APPROVED" ? "approved" : "rejected";
+          const dates = leave.startDate && leave.endDate 
+            ? `${leave.startDate.toLocaleDateString('en-IN')} to ${leave.endDate.toLocaleDateString('en-IN')}`
+            : leave.startDate?.toLocaleDateString('en-IN') || 'TBD';
+          
+          const approvalData: LeaveApprovalData = {
+            employeeName: leave.user.name || 'Employee',
+            leaveType: leave.leaveType as 'LEAVE' | 'WFH' | 'CASUAL LEAVE' | 'SICK LEAVE' | 'PERSONAL LEAVE',
+            dates,
+            status: leave.status as 'APPROVED' | 'REJECTED',
+          };
+
           await sendMail({
             to: leave.user.email,
             subject: `Leave Request ${leave.status}`,
-            text: `Your ${leave.leaveType.toLowerCase()} leave request has been ${statusText}.`,
+            html: getLeaveApprovalTemplate(approvalData),
           }).catch((err) => console.error(`Email failed for ${leave.userId}:`, err));
         }
 
@@ -253,12 +267,21 @@ export async function executeEveningReminder(
 
         // Send email to company email
         if (wfh.user.email) {
-          const statusText =
-            wfh.status === "APPROVED" ? "approved" : "rejected";
+          const dates = wfh.date
+            ? new Date(wfh.date).toLocaleDateString('en-IN')
+            : 'TBD';
+          
+          const approvalData: LeaveApprovalData = {
+            employeeName: wfh.user.name || 'Employee',
+            leaveType: 'WFH',
+            dates,
+            status: wfh.status as 'APPROVED' | 'REJECTED',
+          };
+
           await sendMail({
             to: wfh.user.email,
             subject: `Work from Home (WFH) Request ${wfh.status}`,
-            text: `Your Work from Home request has been ${statusText}.`,
+            html: getLeaveApprovalTemplate(approvalData),
           }).catch((err) => console.error(`Email failed for ${wfh.userId}:`, err));
         }
 

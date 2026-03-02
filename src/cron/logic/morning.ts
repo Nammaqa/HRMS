@@ -2,6 +2,10 @@ import { PrismaClient } from "@prisma/client";
 import { addDays, getDay, startOfDay, endOfDay } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { sendMail } from "../../utils/mailer";  // corrected path
+import { 
+  getGoodMorningReminderTemplate, 
+  getMidMorningReminderTemplate 
+} from "../../utils/emailTemplates";
 
 interface ExecutionSummary {
   totalUsers: number;
@@ -133,8 +137,8 @@ export async function executeMorningReminder(
         if (attendance.user.email) {
           await sendMail({
             to: attendance.user.email,
-            subject: "Morning Reminder - Check In",
-            text: "Good morning! Don't forget to check in for the day.",
+            subject: "Good Morning! - Attendance Reminder",
+            html: getGoodMorningReminderTemplate(),
           }).catch((err) =>
             console.error(`Email failed for ${attendance.userId}:`, err)
           );
@@ -195,8 +199,8 @@ export async function executeMorningReminder(
         if (user.email) {
           await sendMail({
             to: user.email,
-            subject: "Morning Reminder - Check In",
-            text: "Good morning! Don't forget to check in for the day.",
+            subject: "Action Required - Please Mark Your Attendance",
+            html: getMidMorningReminderTemplate(),
           }).catch((err) => console.error(`Email failed for ${user.id}:`, err));
         }
 
