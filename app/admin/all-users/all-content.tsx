@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Modal } from "@/components/Modal";
 import { Button } from "@mui/material";
 import AttendanceManagement from "./attendance-content";
+import LeaveSection from "./employees -leaves";
 import {
   Search,
   Download,
@@ -116,8 +117,9 @@ interface AttendanceSummary {
   daysWithIncompletHours: Array<{ date: string; hours: number }>;
 }
 
+
 export default function AllEmployeeManagement() {
-  const [activeTab, setActiveTab] = useState<"employees" | "attendance">("employees");
+  const [activeTab, setActiveTab] = useState<"employees" | "attendance" | "leaves">("employees");
 
   return (
     <div className="p-6">
@@ -149,11 +151,25 @@ export default function AllEmployeeManagement() {
             Attendance Management
           </div>
         </button>
+        <button
+          onClick={() => setActiveTab("leaves")}
+          className={`px-6 py-3 font-semibold border-b-2 transition-colors ${
+            activeTab === "leaves"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-gray-600 hover:text-gray-900"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <FileText className="w-5 h-5" />
+            Leave Management
+          </div>
+        </button>
       </div>
 
       {/* Tab Content */}
       {activeTab === "employees" && <EmployeeSection />}
       {activeTab === "attendance" && <AttendanceSection />}
+      {activeTab === "leaves" && <LeaveSection />}
     </div>
   );
 }
