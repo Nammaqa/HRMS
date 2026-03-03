@@ -17,7 +17,9 @@ function decodeToken(token: string): { userId: string; email: string; role: stri
 
 /**
  * GET /api/leave-balance
- * Fetch current leave balance for authenticated user
+ * Fetch leave balances
+ * If user is admin, return all leave balances
+ * Otherwise, return current user's leave balance
  */
 export async function GET(request: NextRequest) {
   try {
@@ -48,8 +50,37 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get or create leave balance
-    // Include user so we can inspect join date for first‑month logic
+    // Check if user is admin
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+
+    // If admin, return all leave balances
+    if (user?.role === "admin") {
+      const allBalances = await prisma.leaveBalance.findMany({
+        include: { user: { select: { id: true, firstName: true, lastName: true } } },
+      });
+
+      const formattedData = allBalances.map((balance) => ({
+        id: balance.id,
+        userId: balance.userId,
+        employeeName: balance.user ? `${balance.user.firstName} ${balance.user.lastName}`.trim() : "Unknown",
+        sickLeave: balance.sickLeave,
+        specialLeave: balance.specialLeave,
+        bereavementLeave: balance.bereavementLeave,
+        paternityLeave: balance.paternityLeave,
+        earnedLeave: balance.earnedLeave,
+        currentYear: balance.currentYear,
+      }));
+
+      return NextResponse.json({
+        success: true,
+        data: formattedData,
+      });
+    }
+
+    // Otherwise, return current user's leave balance
     let leaveBalance = await prisma.leaveBalance.findUnique({
       where: { userId },
       include: { user: true },

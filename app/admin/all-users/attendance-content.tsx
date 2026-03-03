@@ -25,6 +25,11 @@ interface AttendanceRecord {
   date: string;
   loginTime?: string;
   logoutTime?: string;
+  // latitude/longitude fields only shown in logs view
+  loginLatitude?: number;
+  loginLongitude?: number;
+  logoutLatitude?: number;
+  logoutLongitude?: number;
   totalWorkingHours?: number;
   status: "FULL_DAY" | "HALF_DAY_FIRST" | "HALF_DAY_SECOND" | "ABSENT" | "LEAVE" | "WFH" | "HOLIDAY";
   shift: "FIRST_HALF" | "SECOND_HALF" | "NONE";
@@ -100,7 +105,7 @@ export default function AttendanceManagement() {
       }
 
       const result = await response.json();
-      
+
       // Transform the API response to match the interface
       const transformedData = result.data.map((record: any) => ({
         id: record.id,
@@ -113,6 +118,10 @@ export default function AttendanceManagement() {
         logoutTime: record.logoutTime
           ? new Date(record.logoutTime).toTimeString().slice(0, 5)
           : undefined,
+        loginLatitude: record.loginLatitude,
+        loginLongitude: record.loginLongitude,
+        logoutLatitude: record.logoutLatitude,
+        logoutLongitude: record.logoutLongitude,
         totalWorkingHours: record.totalWorkingHours,
         status: record.status,
         shift: record.shift,
@@ -356,7 +365,9 @@ export default function AttendanceManagement() {
       "Employee Name",
       "Date",
       "Login Time",
+      "Login Coordinates",
       "Logout Time",
+      "Logout Coordinates",
       "Working Hours",
       "Status",
       "Manual",
@@ -370,7 +381,13 @@ export default function AttendanceManagement() {
           record.userName,
           record.date,
           record.loginTime || "-",
+          record.loginLatitude != null && record.loginLongitude != null
+            ? `${record.loginLatitude.toFixed(5)}, ${record.loginLongitude.toFixed(5)}`
+            : "-",
           record.logoutTime || "-",
+          record.logoutLatitude != null && record.logoutLongitude != null
+            ? `${record.logoutLatitude.toFixed(5)}, ${record.logoutLongitude.toFixed(5)}`
+            : "-",
           record.totalWorkingHours?.toFixed(2) || "-",
           record.status,
           record.isManual ? "Yes" : "No",
@@ -818,7 +835,9 @@ function AttendanceLogsView({
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Employee</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Login</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Login Coords</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Logout</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Logout Coords</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Hours</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
                   <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">Action</th>
@@ -830,7 +849,17 @@ function AttendanceLogsView({
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{record.userName}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{new Date(record.date).toLocaleDateString()}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{record.loginTime || "-"}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {record.loginLatitude != null && record.loginLongitude != null
+                        ? `${record.loginLatitude.toFixed(5)}, ${record.loginLongitude.toFixed(5)}`
+                        : "-"}
+                    </td>
                     <td className="px-6 py-4 text-sm text-gray-600">{record.logoutTime || "-"}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {record.logoutLatitude != null && record.logoutLongitude != null
+                        ? `${record.logoutLatitude.toFixed(5)}, ${record.logoutLongitude.toFixed(5)}`
+                        : "-"}
+                    </td>
                     <td className="px-6 py-4 text-sm text-gray-600">{record.totalWorkingHours?.toFixed(1) || "-"}h</td>
                     <td className="px-6 py-4 text-sm">
                       <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(record.status)}`}>
