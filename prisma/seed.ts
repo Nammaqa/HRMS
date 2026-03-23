@@ -146,6 +146,34 @@ async function main() {
     },
   });
 
+  // -------------------
+  // Test WFH Request
+  // -------------------
+  await prisma.wFHRequest.create({
+    data: {
+      userId: employee.id,
+      date: new Date("2026-03-20"),
+      inTime: new Date("2026-03-20T09:00:00"),
+      outTime: new Date("2026-03-20T17:00:00"),
+      description: "Working on urgent project deliverables",
+      status: "PENDING",
+    },
+  });
+
+  // -------------------
+  // Test Leave Request
+  // -------------------
+  // await prisma.leaveRequest.create({
+  //   data: {
+  //     userId: employee.id,
+  //     leaveType: "SICK",
+  //     startDate: new Date("2026-03-25"),
+  //     endDate: new Date("2026-03-26"),
+  //     reason: "Medical appointment",
+  //     status: "PENDING",
+  //   },
+  // });
+
   console.log("✅ Seed completed successfully");
   console.log("Admin:", admin.email);
   console.log("Employee:", employee.email);

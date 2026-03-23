@@ -184,11 +184,10 @@ export async function GET(request: NextRequest) {
       type: h.type.toLowerCase() as "national" | "company" | "festival" | "optional",
     }));
 
-    // Fetch pending leave requests
+    // Fetch leave requests (all statuses)
     const leaveRequests = await prisma.leaveRequest.findMany({
       where: {
         userId,
-        status: "PENDING",
       },
       select: {
         id: true,
@@ -198,7 +197,6 @@ export async function GET(request: NextRequest) {
         reason: true,
         status: true,
       },
-      take: 3,
       orderBy: { createdAt: "desc" },
     });
 
@@ -210,6 +208,31 @@ export async function GET(request: NextRequest) {
       startDate: leave.startDate.toISOString().split("T")[0],
       endDate: leave.endDate.toISOString().split("T")[0],
       reason: leave.reason || "",
+    }));
+
+    // Fetch WFH requests (all statuses)
+    const wfhRequests = await prisma.wFHRequest.findMany({
+      where: {
+        userId,
+      },
+      select: {
+        id: true,
+        date: true,
+        inTime: true,
+        outTime: true,
+        description: true,
+        status: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Format WFH requests
+    const formattedWFH = wfhRequests.map((wfh) => ({
+      id: wfh.id,
+      status: wfh.status.toLowerCase(),
+      startDate: wfh.date.toISOString().split("T")[0],
+      endDate: wfh.date.toISOString().split("T")[0],
+      reason: wfh.description || "",
     }));
 
     // Fetch all employees with birthdays (excluding current user)
@@ -248,6 +271,7 @@ export async function GET(request: NextRequest) {
         recentAttendance: formattedRecentAttendance,
         holidays: formattedHolidays,
         leaves: formattedLeaves,
+        wfh: formattedWFH,
         birthdays,
       },
     });

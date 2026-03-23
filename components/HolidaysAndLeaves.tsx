@@ -58,7 +58,7 @@ export function HolidaysAndLeaves({ holidays = [], leaves = [], wfh = [] }: Holi
       <div className="bg-white rounded-lg shadow-md p-6 border border-gray-100">
         <div className="flex items-center gap-2 mb-6">
           <Calendar className="w-6 h-6 text-blue-600" />
-          <h3 className="text-lg font-bold text-gray-900">Upcoming Holidays</h3>
+          <h3 className="text-lg font-bold text-gray-900">Holidays of this Month</h3>
           <span className="ml-auto text-sm font-semibold text-gray-600 bg-blue-100 px-3 py-1 rounded-full">
             {upcomingHolidays.length}
           </span>
@@ -123,8 +123,8 @@ export function HolidaysAndLeaves({ holidays = [], leaves = [], wfh = [] }: Holi
           )}
         </div>
 
-        {/* Pending Leaves */}
-{pendingLeaves.length > 0 && (
+        {/* Pending Leaves and WFH */}
+{(pendingLeaves.length > 0 || pendingWFH.length > 0) && (
   <div className="mb-6">
     <h4 className="mb-3 text-sm font-medium text-gray-700 uppercase">
       Pending Approval
@@ -168,13 +168,50 @@ export function HolidaysAndLeaves({ holidays = [], leaves = [], wfh = [] }: Holi
           <ChevronRight className="h-4 w-4 text-gray-400 mt-1" />
         </div>
       ))}
+      {pendingWFH.map((wfh) => (
+        <div
+          key={wfh.id}
+          className="flex items-start justify-between rounded-md border border-gray-200 bg-white p-4 hover:bg-gray-50 transition"
+        >
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium text-gray-900">
+                Work From Home
+              </p>
+              <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">
+                Pending
+              </span>
+            </div>
+
+            <p className="mt-1 text-sm text-gray-600">
+              {new Date(wfh.startDate).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}{" "}
+              –{" "}
+              {new Date(wfh.endDate).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}
+            </p>
+
+            {wfh.reason && (
+              <p className="mt-1 text-sm text-gray-500">
+                Reason: {wfh.reason}
+              </p>
+            )}
+          </div>
+
+          <ChevronRight className="h-4 w-4 text-gray-400 mt-1" />
+        </div>
+      ))}
     </div>
   </div>
 )}
 
 
-        {/* Approved Leaves */}
-        {approvedLeaves.length > 0 && (
+        {/* Approved Leaves and WFH */}
+        {(approvedLeaves.length > 0 || approvedWFH.length > 0) && (
           <div className="mb-6">
             <h4 className="text-sm font-semibold text-gray-700 mb-3 text-green-600 uppercase">
               ✓ Approved
@@ -204,12 +241,36 @@ export function HolidaysAndLeaves({ holidays = [], leaves = [], wfh = [] }: Holi
                   </div>
                 </div>
               ))}
+              {approvedWFH.map((wfh) => (
+                <div
+                  key={wfh.id}
+                  className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-gray-900">Work From Home</p>
+                      <span className="text-xs font-semibold px-2 py-1 rounded-full bg-green-200 text-green-800">
+                        Approved
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-2">
+                      {new Date(wfh.startDate).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })} - {new Date(wfh.endDate).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        {/* Rejected Leaves */}
-        {rejectedLeaves.length > 0 && (
+        {/* Rejected Leaves and WFH */}
+        {(rejectedLeaves.length > 0 || rejectedWFH.length > 0) && (
           <div className="mb-6">
             <h4 className="text-sm font-semibold text-gray-700 mb-3 text-red-600 uppercase">
               ✗ Rejected
@@ -239,15 +300,39 @@ export function HolidaysAndLeaves({ holidays = [], leaves = [], wfh = [] }: Holi
                   </div>
                 </div>
               ))}
+              {rejectedWFH.map((wfh) => (
+                <div
+                  key={wfh.id}
+                  className="flex items-center justify-between p-4 bg-gradient-to-r from-red-50 to-red-100 rounded-lg border border-red-200"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-gray-900">Work From Home</p>
+                      <span className="text-xs font-semibold px-2 py-1 rounded-full bg-red-200 text-red-800">
+                        Rejected
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-2">
+                      {new Date(wfh.startDate).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })} - {new Date(wfh.endDate).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        {/* No Leaves State */}
-        {leaves.length === 0 && (
+        {/* No Applications State */}
+        {leaves.length === 0 && wfh.length === 0 && (
           <div className="text-center py-8 text-gray-500">
             <AlertCircle className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-            <p className="text-sm">No leave applications</p>
+            <p className="text-sm">No leave or WFH applications</p>
           </div>
         )}
 

@@ -60,6 +60,14 @@ interface Leave {
   reason: string;
 }
 
+interface WFH {
+  id: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+  reason?: string;
+}
+
 interface SpecialOccasion {
   id: string;
   name: string;
@@ -92,6 +100,7 @@ export default function EmployeeDashboard() {
   const [recentAttendance, setRecentAttendance] = useState<RecentAttendance[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [leaves, setLeaves] = useState<Leave[]>([]);
+  const [wfh, setWfh] = useState<WFH[]>([]);
   const [specialOccasions, setSpecialOccasions] = useState<SpecialOccasions>({
     yesterday: [],
     today: [],
@@ -168,12 +177,13 @@ export default function EmployeeDashboard() {
     const result = await response.json();
 
     if (result.success && result.data) {
-      const { user, stats, recentAttendance, holidays, leaves } = result.data;
+      const { user, stats, recentAttendance, holidays, leaves, wfh } = result.data;
       setUser(user);
       setStats(stats);
       setRecentAttendance(recentAttendance);
       setHolidays(holidays);
       setLeaves(leaves);
+      setWfh(wfh);
     }
   };
 
@@ -300,7 +310,7 @@ export default function EmployeeDashboard() {
           </div>
 
           <div className="space-y-8">
-            <HolidaysAndLeaves holidays={currentMonthHolidays} leaves={leaves} />
+            <HolidaysAndLeaves holidays={currentMonthHolidays} leaves={leaves} wfh={wfh} />
             {/* <RecentAttendanceTable data={recentAttendance} /> */}
           </div>
         </div>
