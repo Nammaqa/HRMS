@@ -26,6 +26,7 @@ const logoutTime = setSeconds(setMinutes(setHours(today, 23), 59), 59);
 // NEW (FIXED):
 const logoutTime = new Date(today);
 logoutTime.setHours(23, 59, 59, 0);
+
 ```
 
 **Result:** Auto-logout now correctly sets the logout time to 11:59:59 PM IST every day ✓

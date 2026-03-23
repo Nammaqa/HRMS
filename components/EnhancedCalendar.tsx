@@ -17,6 +17,10 @@ interface DayInfo {
   date: string;
   status: DayStatus;
   label?: string;
+  // optional runtime fields from API
+  loginTime?: string | null;
+  logoutTime?: string | null;
+  provisionalHours?: number | null;
 }
 
 interface EnhancedCalendarProps {
@@ -152,43 +156,43 @@ export function EnhancedCalendar({
         const { data } = await response.json();
         if (data && Array.isArray(data)) {
           // Transform API data to DayInfo format
+          const now = new Date();
           const attendanceMap = data.map((record: any) => {
             const date = new Date(record.date);
             const dateStr = `${date.getFullYear()}-${String(
               date.getMonth() + 1
             ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
-            // Priority statuses we should preserve
+            const rawStatus = (record.status || "").toString().toUpperCase();
             let status: DayStatus | null = null;
-            if (record.status === "LEAVE") {
-              status = "leave";
-            } else if (record.status === "WFH") {
-              status = "wfh";
-            } else if (record.status === "HOLIDAY") {
-              status = "holiday";
-            }
 
-            // Map based on total working hours when available
+            // Priority: LEAVE > WFH > HOLIDAY > Attendance hours > Status enum
+            if (rawStatus.includes("LEAVE")) status = "leave";
+            else if (rawStatus.includes("WFH")) status = "wfh";
+            else if (rawStatus.includes("HOLIDAY")) status = "holiday";
+
+            // Use totalWorkingHours when available (past days or closed attendances)
             const twh = record.totalWorkingHours;
-            if (typeof twh === "number") {
-              if (twh >= 8.5) {
-                status = "full-day"; // green
-              } else if (twh >= 4) {
-                status = "half-day"; // orange
-              } else {
-                status = "absent"; // red
-              }
+            if (typeof twh === "number" && !status) {
+              if (twh >= 8.5) status = "full-day";
+              else if (twh >= 4) status = "half-day";
+              else status = "absent";
             }
 
-            // If we still don't have status (no hours & not a special case),
-            // fall back to the stored status field.
-            if (!status) {
-              if (record.status === "ABSENT") {
-                status = "absent";
-              } else if (record.status === "FULL_DAY") {
-                status = "present";
-              } else if (record.status === "HALF_DAY_FIRST" || record.status === "HALF_DAY_SECOND") {
-                status = "half-day";
+            // Fallback mapping from common DB enums (only if no status yet)
+            if (!status && rawStatus) {
+              if (rawStatus === "ABSENT") status = "absent";
+              else if (rawStatus === "FULL_DAY" || rawStatus === "PRESENT") status = "present";
+              else if (rawStatus === "HALF_DAY_FIRST" || rawStatus === "HALF_DAY_SECOND") status = "half-day";
+            }
+
+            let provisionalHours: number | null = null;
+            if (record.loginTime && !record.logoutTime) {
+              try {
+                const login = new Date(record.loginTime);
+                provisionalHours = Math.max(0, (now.getTime() - login.getTime()) / (1000 * 60 * 60));
+              } catch (e) {
+                provisionalHours = null;
               }
             }
 
@@ -196,6 +200,9 @@ export function EnhancedCalendar({
               date: dateStr,
               status,
               label: record.status,
+              loginTime: record.loginTime ?? null,
+              logoutTime: record.logoutTime ?? null,
+              provisionalHours,
             };
           });
 
@@ -321,45 +328,65 @@ export function EnhancedCalendar({
             displayLabel = "ABSENT";
           }
 
-          // For today: show color based on attendance status
-          const isTodayCheckedIn = isToday && (info?.status === "present" || info?.status === "full-day");
-          const isTodayHalfDay = isToday && info?.status === "half-day";
-
-          // For Saturday: check if attendance is marked
-          const saturdayHasAttendance = saturday && info?.status;
-
-          // Get background color
+          // For today: determine checked-in / in-progress display using provisional hours
+          const saturdayHasAttendance = saturday && !!info?.status;
           const backgroundColor = getBackgroundColor(displayStatus);
           const hasColor = !!backgroundColor;
+
+          // Determine class for the cell
+          let cellClass = "text-black hover:bg-black/5";
+
+          if (saturday) {
+            cellClass = saturdayHasAttendance ? "text-green-600" : "text-black";
+          } else if (sunday) {
+            cellClass = "text-gray-400 bg-gray-100/50";
+          } else if (isToday) {
+            if (info) {
+              // For today: check if it's WFH or Leave first
+              if (info.status === "wfh" || info.status === "leave" || info.status === "holiday") {
+                // Show fixed colour for WFH/Leave/Holiday
+                cellClass = `${backgroundColor} text-white`;
+              } else {
+                // For attendance: check in-progress status
+                const loggedIn = !!info.loginTime;
+                const loggedOut = !!info.logoutTime;
+
+                if (loggedIn && !loggedOut) {
+                  // In-progress: use provisionalHours to display ring colour
+                  const hours = info.provisionalHours ?? 0;
+                  if (hours >= 8.5) cellClass = "ring-2 ring-green-500 scale-110 text-black";
+                  else if (hours >= 4) cellClass = "ring-2 ring-amber-500 scale-110 text-black";
+                  else cellClass = "ring-2 ring-black scale-110 text-black";
+                } else if (info.status === "present" || info.status === "full-day") {
+                  cellClass = "bg-green-500 scale-110 shadow-lg text-white";
+                } else if (info.status === "half-day") {
+                  cellClass = "bg-amber-500 scale-110 shadow-lg text-white";
+                } else if (hasColor) {
+                  cellClass = `${backgroundColor} text-white`;
+                } else {
+                  cellClass = "ring-2 ring-black scale-110 text-black";
+                }
+              }
+            } else {
+              // Today but no attendance record yet: prompt ring
+              cellClass = "ring-2 ring-black scale-110 text-black";
+            }
+          } else {
+            // Non-today, non-weekend
+            if (hasColor) cellClass = `${backgroundColor} text-white`;
+            else cellClass = "text-black hover:bg-black/5";
+          }
 
           return (
             <button
               key={day}
-              onClick={() =>
-                onDateSelect?.(new Date(year, month, day))
-              }
+              onClick={() => onDateSelect?.(new Date(year, month, day))}
               className={`
                 relative mx-auto w-10 h-10 rounded-full
                 flex items-center justify-center
                 transition-all duration-200
                 font-semibold text-sm
-                ${
-                  saturday
-                    ? saturdayHasAttendance
-                      ? "text-green-600"
-                      : "text-black"
-                    : sunday
-                    ? "text-gray-400 bg-gray-100/50"
-                    : hasColor
-                    ? `${backgroundColor} text-white`
-                    : isToday
-                    ? isTodayCheckedIn
-                      ? "bg-green-500 scale-110 shadow-lg text-white"
-                      : isTodayHalfDay
-                      ? "bg-amber-500 scale-110 shadow-lg text-white"
-                      : "ring-2 ring-black scale-110 text-black"
-                    : "text-black hover:bg-black/5"
-                }
+                ${cellClass}
               `}
             >
               <span className="font-medium">{day}</span>

@@ -156,7 +156,7 @@ export default function EmployeeList() {
         body: JSON.stringify({
           ...formData,
           joinDate: formData.dateOfJoining,
-          password: "123456",
+          // Password must now be explicitly provided by the user
         }),
       });
 

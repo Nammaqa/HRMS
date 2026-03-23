@@ -117,7 +117,7 @@ export async function executeAutoLogout(
           const diffMs = logoutForRecord.getTime() - loginTime.getTime();
           const totalWorkingHours = diffMs / (1000 * 60 * 60); // Convert milliseconds to hours
           
-          // Determine attendance status based on working hours
+          // Determine attendance status based on working hours 
           let attendanceStatus: "FULL_DAY" | "HALF_DAY_FIRST" | "HALF_DAY_SECOND" | "ABSENT" = "HALF_DAY_FIRST";
           if (totalWorkingHours >= 8.5) {
             attendanceStatus = "FULL_DAY";
@@ -173,13 +173,19 @@ export async function executeAutoLogout(
 
         // Send email to company email
         if (attendance.user.email) {
-          await sendMail({
-            to: attendance.user.email,
-            subject: "Auto Logout Notice - EL Deduction Warning",
-            html: getAutoLogoutWarningTemplate(),
-          }).catch((err) =>
-            console.error(`Email failed for auto-logout to ${attendance.userId}:`, err)
-          );
+          try {
+            console.log(`[AUTO_LOGOUT] Sending auto logout warning email to ${attendance.user.email}`);
+            await sendMail({
+              to: attendance.user.email,
+              subject: "Auto Logout Notice - EL Deduction Warning",
+              html: getAutoLogoutWarningTemplate(),
+            });
+            console.log(`[AUTO_LOGOUT] Email sent successfully to ${attendance.user.email}`);
+          } catch (err) {
+            console.error(`[AUTO_LOGOUT] Email failed for auto-logout to ${attendance.userId} (${attendance.user.email}):`, err);
+          }
+        } else {
+          console.warn(`[AUTO_LOGOUT] No email found for user ${attendance.userId}`);
         }
 
         summary.successCount++;

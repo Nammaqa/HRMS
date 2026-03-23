@@ -18,12 +18,21 @@ interface Leave {
   reason: string;
 }
 
+interface WFH {
+  id: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+  reason?: string;
+}
+
 interface HolidaysAndLeavesProps {
   holidays?: Holiday[];
   leaves?: Leave[];
+  wfh?: WFH[];
 }
 
-export function HolidaysAndLeaves({ holidays = [], leaves = [] }: HolidaysAndLeavesProps) {
+export function HolidaysAndLeaves({ holidays = [], leaves = [], wfh = [] }: HolidaysAndLeavesProps) {
   const upcomingHolidays = holidays
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 5);
@@ -31,6 +40,10 @@ export function HolidaysAndLeaves({ holidays = [], leaves = [] }: HolidaysAndLea
   const pendingLeaves = leaves.filter((l) => l.status === "pending");
   const approvedLeaves = leaves.filter((l) => l.status === "approved");
   const rejectedLeaves = leaves.filter((l) => l.status === "rejected");
+
+  const pendingWFH = wfh.filter((w) => w.status === "pending");
+  const approvedWFH = wfh.filter((w) => w.status === "approved");
+  const rejectedWFH = wfh.filter((w) => w.status === "rejected");
 
   return (
     <div className="space-y-6">
@@ -102,10 +115,10 @@ export function HolidaysAndLeaves({ holidays = [], leaves = [] }: HolidaysAndLea
       <div className="bg-white rounded-lg shadow-md p-6 border border-gray-100">
         <div className="flex items-center gap-2 mb-6">
           <AlertCircle className="w-6 h-6 text-orange-600" />
-          <h3 className="text-lg font-bold text-gray-900">Leave Applications</h3>
-          {pendingLeaves.length > 0 && (
+          <h3 className="text-lg font-bold text-gray-900">Leave & WFH Applications</h3>
+          {(pendingLeaves.length > 0 || pendingWFH.length > 0) && (
             <span className="ml-auto text-sm font-semibold text-white bg-orange-600 px-3 py-1 rounded-full">
-              {pendingLeaves.length} Pending
+              {pendingLeaves.length + pendingWFH.length} Pending
             </span>
           )}
         </div>

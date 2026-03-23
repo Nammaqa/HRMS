@@ -83,15 +83,113 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Format the response
-    const formattedData = attendanceRecords.map((record) => ({
-      id: record.id,
-      date: record.date.toISOString().split("T")[0], // YYYY-MM-DD format
-      status: record.status,
-      loginTime: record.loginTime?.toISOString() || null,
-      logoutTime: record.logoutTime?.toISOString() || null,
-      totalWorkingHours: record.totalWorkingHours || 0,
-    }));
+    // Fetch approved WFH requests for the month
+    const wfhRequests = await prisma.wFHRequest.findMany({
+      where: {
+        userId,
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+        status: "APPROVED",
+      },
+      select: {
+        date: true,
+      },
+    });
+
+    // Fetch approved Leave requests for the month
+    const leaveRequests = await prisma.leaveRequest.findMany({
+      where: {
+        userId,
+        startDate: {
+          lte: endDate,
+        },
+        endDate: {
+          gte: startDate,
+        },
+        status: "APPROVED",
+      },
+      select: {
+        startDate: true,
+        endDate: true,
+      },
+    });
+
+    // Create maps for quick lookup
+    const wfhDates = new Set(wfhRequests.map((w) => w.date.toISOString().split("T")[0]));
+    
+    const leaveDates = new Set<string>();
+    leaveRequests.forEach((leave) => {
+      const current = new Date(leave.startDate);
+      const end = new Date(leave.endDate);
+      while (current <= end) {
+        leaveDates.add(current.toISOString().split("T")[0]);
+        current.setDate(current.getDate() + 1);
+      }
+    });
+
+    // Format attendance records and overlay WFH/Leave status
+    const formattedData: Array<{
+      id: number | null;
+      date: string;
+      status: string;
+      loginTime: string | null;
+      logoutTime: string | null;
+      totalWorkingHours: number;
+    }> = attendanceRecords.map((record) => {
+      const dateStr = record.date.toISOString().split("T")[0];
+      
+      // Priority: Leave > WFH > Attendance Status
+      let status = record.status;
+      if (leaveDates.has(dateStr)) {
+        status = "LEAVE";
+      } else if (wfhDates.has(dateStr)) {
+        status = "WFH";
+      }
+
+      return {
+        id: record.id,
+        date: dateStr,
+        status,
+        loginTime: record.loginTime?.toISOString() || null,
+        logoutTime: record.logoutTime?.toISOString() || null,
+        totalWorkingHours: record.totalWorkingHours || 0,
+      };
+    });
+
+    // Add WFH-only records (no attendance record)
+    const attendanceDates = new Set(attendanceRecords.map((a) => a.date.toISOString().split("T")[0]));
+    
+    wfhDates.forEach((dateStr) => {
+      if (!attendanceDates.has(dateStr) && !leaveDates.has(dateStr)) {
+        formattedData.push({
+          id: null,
+          date: dateStr,
+          status: "WFH",
+          loginTime: null,
+          logoutTime: null,
+          totalWorkingHours: 0,
+        });
+      }
+    });
+
+    // Add Leave-only records (no attendance record)
+    leaveDates.forEach((dateStr) => {
+      if (!attendanceDates.has(dateStr) && !wfhDates.has(dateStr)) {
+        formattedData.push({
+          id: null,
+          date: dateStr,
+          status: "LEAVE",
+          loginTime: null,
+          logoutTime: null,
+          totalWorkingHours: 0,
+        });
+      }
+    });
+
+    // Sort by date
+    formattedData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     return NextResponse.json(
       {
