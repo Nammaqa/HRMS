@@ -100,6 +100,10 @@ export async function executeMorningReminder(
     // Total targets = attendances without login + users who haven't any attendance today
     summary.totalUsers = eligibleAttendances.length + usersWithoutAttendance.length;
 
+    console.log(`[MORNING] Processing ${eligibleAttendances.length} users with attendance records`);
+    console.log(`[MORNING] Processing ${usersWithoutAttendance.length} users without attendance records`);
+    console.log(`[MORNING] Total users to process: ${summary.totalUsers}`);
+
     // Process attendance-based reminders
     for (const attendance of eligibleAttendances) {
       try {
@@ -135,13 +139,19 @@ export async function executeMorningReminder(
 
         // Send email to company email
         if (attendance.user.email) {
-          await sendMail({
-            to: attendance.user.email,
-            subject: "Good Morning! - Attendance Reminder",
-            html: getGoodMorningReminderTemplate(),
-          }).catch((err) =>
-            console.error(`Email failed for ${attendance.userId}:`, err)
-          );
+          try {
+            console.log(`[MORNING] Sending email to ${attendance.user.email}`);
+            await sendMail({
+              to: attendance.user.email,
+              subject: "Good Morning! - Attendance Reminder",
+              html: getGoodMorningReminderTemplate(),
+            });
+            console.log(`[MORNING] Email sent successfully to ${attendance.user.email}`);
+          } catch (err) {
+            console.error(`[MORNING] Email failed for ${attendance.userId} (${attendance.user.email}):`, err);
+          }
+        } else {
+          console.warn(`[MORNING] No email found for user ${attendance.userId}`);
         }
 
         summary.successCount++;
@@ -197,11 +207,19 @@ export async function executeMorningReminder(
 
         // Send email to company email
         if (user.email) {
-          await sendMail({
-            to: user.email,
-            subject: "Action Required - Please Mark Your Attendance",
-            html: getMidMorningReminderTemplate(),
-          }).catch((err) => console.error(`Email failed for ${user.id}:`, err));
+          try {
+            console.log(`[MORNING] Sending email to ${user.email}`);
+            await sendMail({
+              to: user.email,
+              subject: "Action Required - Please Mark Your Attendance",
+              html: getMidMorningReminderTemplate(),
+            });
+            console.log(`[MORNING] Email sent successfully to ${user.email}`);
+          } catch (err) {
+            console.error(`[MORNING] Email failed for ${user.id} (${user.email}):`, err);
+          }
+        } else {
+          console.warn(`[MORNING] No email found for user ${user.id}`);
         }
 
         summary.successCount++;

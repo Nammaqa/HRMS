@@ -124,13 +124,19 @@ export async function executeEveningReminder(
 
         // Send email to company email
         if (attendance.user.email) {
-          await sendMail({
-            to: attendance.user.email,
-            subject: "Evening Reminder - Time to Log Out",
-            html: getEveningLogoutReminderTemplate(),
-          }).catch((err) =>
-            console.error(`Email failed for ${attendance.userId}:`, err)
-          );
+          try {
+            console.log(`[EVENING] Sending logout reminder email to ${attendance.user.email}`);
+            await sendMail({
+              to: attendance.user.email,
+              subject: "Evening Reminder - Time to Log Out",
+              html: getEveningLogoutReminderTemplate(),
+            });
+            console.log(`[EVENING] Email sent successfully to ${attendance.user.email}`);
+          } catch (err) {
+            console.error(`[EVENING] Email failed for ${attendance.userId} (${attendance.user.email}):`, err);
+          }
+        } else {
+          console.warn(`[EVENING] No email found for user ${attendance.userId}`);
         }
 
         summary.successCount++;
@@ -191,22 +197,30 @@ export async function executeEveningReminder(
 
         // Send email to company email
         if (leave.user.email) {
-          const dates = leave.startDate && leave.endDate 
-            ? `${leave.startDate.toLocaleDateString('en-IN')} to ${leave.endDate.toLocaleDateString('en-IN')}`
-            : leave.startDate?.toLocaleDateString('en-IN') || 'TBD';
-          
-          const approvalData: LeaveApprovalData = {
-            employeeName: leave.user.name || 'Employee',
-            leaveType: leave.leaveType as 'LEAVE' | 'WFH' | 'CASUAL LEAVE' | 'SICK LEAVE' | 'PERSONAL LEAVE',
-            dates,
-            status: leave.status as 'APPROVED' | 'REJECTED',
-          };
+          try {
+            console.log(`[EVENING] Sending leave approval email to ${leave.user.email}`);
+            const dates = leave.startDate && leave.endDate 
+              ? `${leave.startDate.toLocaleDateString('en-IN')} to ${leave.endDate.toLocaleDateString('en-IN')}`
+              : leave.startDate?.toLocaleDateString('en-IN') || 'TBD';
+            
+            const approvalData: LeaveApprovalData = {
+              employeeName: leave.user.name || 'Employee',
+              leaveType: leave.leaveType as 'LEAVE' | 'WFH' | 'CASUAL LEAVE' | 'SICK LEAVE' | 'PERSONAL LEAVE',
+              dates,
+              status: leave.status as 'APPROVED' | 'REJECTED',
+            };
 
-          await sendMail({
-            to: leave.user.email,
-            subject: `Leave Request ${leave.status}`,
-            html: getLeaveApprovalTemplate(approvalData),
-          }).catch((err) => console.error(`Email failed for ${leave.userId}:`, err));
+            await sendMail({
+              to: leave.user.email,
+              subject: `Leave Request ${leave.status}`,
+              html: getLeaveApprovalTemplate(approvalData),
+            });
+            console.log(`[EVENING] Email sent successfully to ${leave.user.email}`);
+          } catch (err) {
+            console.error(`[EVENING] Email failed for ${leave.userId} (${leave.user.email}):`, err);
+          }
+        } else {
+          console.warn(`[EVENING] No email found for user ${leave.userId}`);
         }
 
         summary.successCount++;
@@ -267,22 +281,30 @@ export async function executeEveningReminder(
 
         // Send email to company email
         if (wfh.user.email) {
-          const dates = wfh.date
-            ? new Date(wfh.date).toLocaleDateString('en-IN')
-            : 'TBD';
-          
-          const approvalData: LeaveApprovalData = {
-            employeeName: wfh.user.name || 'Employee',
-            leaveType: 'WFH',
-            dates,
-            status: wfh.status as 'APPROVED' | 'REJECTED',
-          };
+          try {
+            console.log(`[EVENING] Sending WFH approval email to ${wfh.user.email}`);
+            const dates = wfh.date
+              ? new Date(wfh.date).toLocaleDateString('en-IN')
+              : 'TBD';
+            
+            const approvalData: LeaveApprovalData = {
+              employeeName: wfh.user.name || 'Employee',
+              leaveType: 'WFH',
+              dates,
+              status: wfh.status as 'APPROVED' | 'REJECTED',
+            };
 
-          await sendMail({
-            to: wfh.user.email,
-            subject: `Work from Home (WFH) Request ${wfh.status}`,
-            html: getLeaveApprovalTemplate(approvalData),
-          }).catch((err) => console.error(`Email failed for ${wfh.userId}:`, err));
+            await sendMail({
+              to: wfh.user.email,
+              subject: `Work from Home (WFH) Request ${wfh.status}`,
+              html: getLeaveApprovalTemplate(approvalData),
+            });
+            console.log(`[EVENING] Email sent successfully to ${wfh.user.email}`);
+          } catch (err) {
+            console.error(`[EVENING] Email failed for ${wfh.userId} (${wfh.user.email}):`, err);
+          }
+        } else {
+          console.warn(`[EVENING] No email found for user ${wfh.userId}`);
         }
 
         summary.successCount++;

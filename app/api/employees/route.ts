@@ -249,8 +249,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password || "123456", 10);
+    // Hash password (password is required, no default)
+    if (!password || password.trim() === "") {
+      return NextResponse.json(
+        { error: "Password is required when creating a new employee" },
+        { status: 400 }
+      );
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create new user with all fields
     const newEmployee = await prisma.user.create({
