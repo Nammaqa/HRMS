@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { addDays, getDay, startOfDay, endOfDay } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
-import { sendMail } from "../../utils/mailer";  // corrected path
+import { sendMailViaVercel } from "../../utils/vercelMailer";
 import { 
   getGoodMorningReminderTemplate, 
   getMidMorningReminderTemplate 
@@ -141,7 +141,7 @@ export async function executeMorningReminder(
         if (attendance.user.email) {
           try {
             console.log(`[MORNING] Sending email to ${attendance.user.email}`);
-            await sendMail({
+            await sendMailViaVercel({
               to: attendance.user.email,
               subject: "Good Morning! - Attendance Reminder",
               html: getGoodMorningReminderTemplate(),
@@ -209,7 +209,7 @@ export async function executeMorningReminder(
         if (user.email) {
           try {
             console.log(`[MORNING] Sending email to ${user.email}`);
-            await sendMail({
+            await sendMailViaVercel({
               to: user.email,
               subject: "Action Required - Please Mark Your Attendance",
               html: getMidMorningReminderTemplate(),
