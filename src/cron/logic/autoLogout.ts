@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { setHours, setMinutes, setSeconds, startOfDay, endOfDay, subDays } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
-import { sendMail } from "../../utils/mailer";  // corrected path to utils folder (up two levels)
+import { sendMailViaVercel } from "../../utils/vercelMailer";
 import { getAutoLogoutWarningTemplate } from "../../utils/emailTemplates"; 
 
 interface ExecutionSummary {
@@ -175,7 +175,7 @@ export async function executeAutoLogout(
         if (attendance.user.email) {
           try {
             console.log(`[AUTO_LOGOUT] Sending auto logout warning email to ${attendance.user.email}`);
-            await sendMail({
+            await sendMailViaVercel({
               to: attendance.user.email,
               subject: "Auto Logout Notice - EL Deduction Warning",
               html: getAutoLogoutWarningTemplate(),

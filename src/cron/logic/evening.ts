@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { getDay, startOfDay, endOfDay } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
-import { sendMail } from "../../utils/mailer";  // corrected path
+import { sendMailViaVercel } from "../../utils/vercelMailer";
 import { 
   getEveningLogoutReminderTemplate,
   getLeaveApprovalTemplate,
@@ -126,7 +126,7 @@ export async function executeEveningReminder(
         if (attendance.user.email) {
           try {
             console.log(`[EVENING] Sending logout reminder email to ${attendance.user.email}`);
-            await sendMail({
+            await sendMailViaVercel({
               to: attendance.user.email,
               subject: "Evening Reminder - Time to Log Out",
               html: getEveningLogoutReminderTemplate(),
@@ -210,7 +210,7 @@ export async function executeEveningReminder(
               status: leave.status as 'APPROVED' | 'REJECTED',
             };
 
-            await sendMail({
+            await sendMailViaVercel({
               to: leave.user.email,
               subject: `Leave Request ${leave.status}`,
               html: getLeaveApprovalTemplate(approvalData),
@@ -294,7 +294,7 @@ export async function executeEveningReminder(
               status: wfh.status as 'APPROVED' | 'REJECTED',
             };
 
-            await sendMail({
+            await sendMailViaVercel({
               to: wfh.user.email,
               subject: `Work from Home (WFH) Request ${wfh.status}`,
               html: getLeaveApprovalTemplate(approvalData),
