@@ -137,3 +137,78 @@ export async function PATCH(
     );
   }
 }
+
+/**
+ * DELETE /api/wfh/[id]
+ * Delete a WFH request (only if pending and owned by the user)
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const token = request.cookies.get("token")?.value;
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const payload = decodeToken(token);
+    if (!payload) {
+      return NextResponse.json(
+        { success: false, error: "Invalid token" },
+        { status: 401 }
+      );
+    }
+
+    const userId = typeof payload.userId === 'string' ? parseInt(payload.userId, 10) : payload.userId;
+
+    // Get WFH request
+    const wfhRequest = await prisma.wFHRequest.findUnique({
+      where: { id: parseInt(id, 10) },
+    });
+
+    if (!wfhRequest) {
+      return NextResponse.json(
+        { success: false, error: "WFH request not found" },
+        { status: 404 }
+      );
+    }
+
+    // Check if the request belongs to the user
+    if (wfhRequest.userId !== userId) {
+      return NextResponse.json(
+        { success: false, error: "You can only delete your own requests" },
+        { status: 403 }
+      );
+    }
+
+    // Check if the request is pending
+    if (wfhRequest.status !== "PENDING") {
+      return NextResponse.json(
+        { success: false, error: "Only pending requests can be deleted" },
+        { status: 400 }
+      );
+    }
+
+    // Delete the WFH request
+    await prisma.wFHRequest.delete({
+      where: { id: parseInt(id, 10) },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "WFH request deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting WFH request:", error);
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
