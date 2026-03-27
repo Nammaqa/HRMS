@@ -1,6 +1,7 @@
 "use client";
 
-import { Calendar, AlertCircle, ChevronRight } from "lucide-react";
+import { Calendar, AlertCircle, ChevronRight, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
 
 interface Holiday {
   id: string;
@@ -33,17 +34,65 @@ interface HolidaysAndLeavesProps {
 }
 
 export function HolidaysAndLeaves({ holidays = [], leaves = [], wfh = [] }: HolidaysAndLeavesProps) {
+  const [localLeaves, setLocalLeaves] = useState(leaves);
+  const [localWfh, setLocalWfh] = useState(wfh);
+
+  useEffect(() => {
+    setLocalLeaves(leaves);
+  }, [leaves]);
+
+  useEffect(() => {
+    setLocalWfh(wfh);
+  }, [wfh]);
   const upcomingHolidays = holidays
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 5);
     
-  const pendingLeaves = leaves.filter((l) => l.status === "pending");
-  const approvedLeaves = leaves.filter((l) => l.status === "approved");
-  const rejectedLeaves = leaves.filter((l) => l.status === "rejected");
+  const pendingLeaves = localLeaves.filter((l) => l.status === "pending");
+  const approvedLeaves = localLeaves.filter((l) => l.status === "approved");
+  const rejectedLeaves = localLeaves.filter((l) => l.status === "rejected");
 
-  const pendingWFH = wfh.filter((w) => w.status === "pending");
-  const approvedWFH = wfh.filter((w) => w.status === "approved");
-  const rejectedWFH = wfh.filter((w) => w.status === "rejected");
+  const pendingWFH = localWfh.filter((w) => w.status === "pending");
+  const approvedWFH = localWfh.filter((w) => w.status === "approved");
+  const rejectedWFH = localWfh.filter((w) => w.status === "rejected");
+
+  const handleDeleteLeave = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this leave request?")) return;
+
+    try {
+      const response = await fetch(`/api/leave-requests/${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setLocalLeaves(localLeaves.filter(l => l.id !== id));
+      } else {
+        alert("Failed to delete leave request");
+      }
+    } catch (error) {
+      console.error("Error deleting leave request:", error);
+      alert("Error deleting leave request");
+    }
+  };
+
+  const handleDeleteWfh = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this WFH request?")) return;
+
+    try {
+      const response = await fetch(`/api/wfh/${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setLocalWfh(localWfh.filter(w => w.id !== id));
+      } else {
+        alert("Failed to delete WFH request");
+      }
+    } catch (error) {
+      console.error("Error deleting WFH request:", error);
+      alert("Error deleting WFH request");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -165,7 +214,16 @@ export function HolidaysAndLeaves({ holidays = [], leaves = [], wfh = [] }: Holi
             )}
           </div>
 
-          <ChevronRight className="h-4 w-4 text-gray-400 mt-1" />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleDeleteLeave(leave.id)}
+              className="text-red-500 hover:text-red-700 p-1"
+              title="Delete request"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+            <ChevronRight className="h-4 w-4 text-gray-400 mt-1" />
+          </div>
         </div>
       ))}
       {pendingWFH.map((wfh) => (
@@ -202,7 +260,16 @@ export function HolidaysAndLeaves({ holidays = [], leaves = [], wfh = [] }: Holi
             )}
           </div>
 
-          <ChevronRight className="h-4 w-4 text-gray-400 mt-1" />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleDeleteWfh(wfh.id)}
+              className="text-red-500 hover:text-red-700 p-1"
+              title="Delete request"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+            <ChevronRight className="h-4 w-4 text-gray-400 mt-1" />
+          </div>
         </div>
       ))}
     </div>
@@ -329,7 +396,7 @@ export function HolidaysAndLeaves({ holidays = [], leaves = [], wfh = [] }: Holi
         )}
 
         {/* No Applications State */}
-        {leaves.length === 0 && wfh.length === 0 && (
+        {localLeaves.length === 0 && localWfh.length === 0 && (
           <div className="text-center py-8 text-gray-500">
             <AlertCircle className="w-12 h-12 mx-auto text-gray-300 mb-3" />
             <p className="text-sm">No leave or WFH applications</p>
