@@ -51,31 +51,75 @@ export async function POST(request: NextRequest) {
     const {
       startDate,
       endDate,
-      inTime,
-      outTime,
       description,
       attachmentUrl,
     } = body;
 
     // Validate required fields
-    if (!startDate || !endDate || !inTime || !outTime || !description) {
+    if (!startDate || !endDate || !description) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Missing required fields (from date, to date, reason)" },
         { status: 400 }
       );
     }
 
-    // Create WFH request
-    const wfhRequest = await prisma.wFHRequest.create({
-      data: {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return NextResponse.json(
+        { error: "Invalid date format" },
+        { status: 400 }
+      );
+    }
+
+    // Normalize to date boundaries
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+
+    if (end < start) {
+      return NextResponse.json(
+        { error: "To date cannot be earlier than from date" },
+        { status: 400 }
+      );
+    }
+
+    // Check existing requests in range and avoid duplicates
+    const existingRequests = await prisma.wFHRequest.findMany({
+      where: {
         userId,
-        date: new Date(startDate),
-        inTime: new Date(`${startDate}T${inTime}`),
-        outTime: new Date(`${endDate}T${outTime}`),
+        date: {
+          gte: start,
+          lte: end,
+        },
+      },
+    });
+
+    if (existingRequests.length > 0) {
+      return NextResponse.json(
+        {
+          error: "WFH request overlaps with existing WFH dates. Please choose a different range or cancel conflicting days.",
+        },
+        { status: 409 }
+      );
+    }
+
+    const dateRange: Date[] = [];
+    const iter = new Date(start);
+    while (iter <= end) {
+      dateRange.push(new Date(iter));
+      iter.setDate(iter.getDate() + 1);
+    }
+
+    const createdWFH = await prisma.wFHRequest.createMany({
+      data: dateRange.map((date) => ({
+        userId,
+        date,
         description,
         attachmentUrl: attachmentUrl || null,
         status: "PENDING",
-      },
+      })),
+      skipDuplicates: true,
     });
 
     // Create notification for admins
@@ -105,7 +149,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        data: wfhRequest,
+        data: {
+          startDate,
+          endDate,
+          totalDays: dateRange.length,
+          insertedCount: createdWFH.count,
+        },
         message: "WFH request submitted successfully",
       },
       { status: 201 }
@@ -162,31 +211,68 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { userId: "asc", date: "asc" }, // Order by user then date for grouping
     });
 
-    const formattedData = wfhRequests.map((req) => ({
-      id: req.id,
-      employeeId: req.user.employeeId || req.user.id,
-      employeeName: `${req.user.firstName} ${req.user.lastName}`.trim(),
-      type: "wfh" as const,
-      startDate: req.date.toISOString().split("T")[0],
-      endDate: req.date.toISOString().split("T")[0],
-      inTime: req.inTime?.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      }),
-      outTime: req.outTime?.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      }),
-      reason: req.description,
-      status: req.status.toLowerCase() as "pending" | "approved" | "rejected",
-      createdAt: req.createdAt.toISOString().split("T")[0],
-      attachmentUrl: req.attachmentUrl || undefined,
-    }));
+    // Group WFH requests by user and then by consecutive dates
+    const groupWFHRequests = (requests: typeof wfhRequests) => {
+      const userGroups: { [userId: number]: typeof requests } = {};
+      
+      // Group by user
+      requests.forEach(req => {
+        if (!userGroups[req.userId]) {
+          userGroups[req.userId] = [];
+        }
+        userGroups[req.userId].push(req);
+      });
+
+      const grouped: any[] = [];
+
+      Object.values(userGroups).forEach(userRequests => {
+        if (userRequests.length === 0) return;
+
+        const groups: typeof userRequests[] = [];
+        let currentGroup = [userRequests[0]];
+
+        for (let i = 1; i < userRequests.length; i++) {
+          const prevDate = new Date(currentGroup[currentGroup.length - 1].date);
+          const currDate = new Date(userRequests[i].date);
+          const diffDays = (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24);
+
+          // Check if consecutive, same status, and same description
+          if (
+            diffDays === 1 &&
+            userRequests[i].status === currentGroup[0].status &&
+            userRequests[i].description === currentGroup[0].description
+          ) {
+            currentGroup.push(userRequests[i]);
+          } else {
+            groups.push(currentGroup);
+            currentGroup = [userRequests[i]];
+          }
+        }
+        groups.push(currentGroup);
+
+        groups.forEach(group => {
+          grouped.push({
+            id: group[0].id, // Use first request's ID
+            employeeId: group[0].user.employeeId || group[0].user.id,
+            employeeName: `${group[0].user.firstName} ${group[0].user.lastName}`.trim(),
+            type: "wfh" as const,
+            startDate: group[0].date.toISOString().split("T")[0],
+            endDate: group[group.length - 1].date.toISOString().split("T")[0],
+            reason: group[0].description,
+            status: group[0].status.toLowerCase() as "pending" | "approved" | "rejected",
+            createdAt: group[0].createdAt.toISOString().split("T")[0], // Use first request's createdAt
+            attachmentUrl: group[0].attachmentUrl || undefined,
+          });
+        });
+      });
+
+      return grouped;
+    };
+
+    const formattedData = groupWFHRequests(wfhRequests);
 
     return NextResponse.json({
       success: true,

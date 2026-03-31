@@ -31,8 +31,6 @@ export function ApplyWFHModal({ open, onClose }: ApplyWFHModalProps) {
   const [formData, setFormData] = useState({
     from: "",
     to: "",
-    inTime: "",
-    outTime: "",
     description: "",
     file: null as File | null,
   });
@@ -43,7 +41,6 @@ export function ApplyWFHModal({ open, onClose }: ApplyWFHModalProps) {
     type: string;
   } | null>(null);
   const [days, setDays] = useState(0);
-  const [hours, setHours] = useState("-");
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
@@ -55,21 +52,27 @@ export function ApplyWFHModal({ open, onClose }: ApplyWFHModalProps) {
       const diff =
         (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24) + 1;
       setDays(diff > 0 ? diff : 0);
-    }
-  };
-
-  const calculateHours = (inTime: string, outTime: string) => {
-    if (inTime && outTime) {
-      const start = new Date(`2000-01-01 ${inTime}`);
-      const end = new Date(`2000-01-01 ${outTime}`);
-      const diff = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-      setHours(diff > 0 ? diff.toFixed(1) : "-");
+    } else {
+      setDays(0);
     }
   };
 
   const handleSubmit = async () => {
-    if (!formData.from || !formData.to || !formData.inTime || !formData.outTime || !formData.description) {
-      setError("Please fill all required fields.");
+    if (!formData.from || !formData.to || !formData.description) {
+      setError("Please fill all required fields (From Date, To Date, Reason).");
+      return;
+    }
+
+    const start = new Date(formData.from);
+    const end = new Date(formData.to);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      setError("Invalid date format.");
+      return;
+    }
+
+    if (end < start) {
+      setError("To date cannot be earlier than From date.");
       return;
     }
 
@@ -101,8 +104,6 @@ export function ApplyWFHModal({ open, onClose }: ApplyWFHModalProps) {
         body: JSON.stringify({
           startDate: formData.from,
           endDate: formData.to,
-          inTime: formData.inTime,
-          outTime: formData.outTime,
           description: formData.description,
           attachmentUrl,
         }),
@@ -118,15 +119,12 @@ export function ApplyWFHModal({ open, onClose }: ApplyWFHModalProps) {
       setFormData({
         from: "",
         to: "",
-        inTime: "",
-        outTime: "",
         description: "",
         file: null,
       });
 
       setFilePreview(null);
       setDays(0);
-      setHours("-");
 
       onClose();
       router.refresh();
@@ -201,107 +199,72 @@ export function ApplyWFHModal({ open, onClose }: ApplyWFHModalProps) {
             </div>
           </div>
 
-          {/* Row 2: Time + Hours */}
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">In Time *</label>
-              <input
-                type="time"
-                className="w-full border rounded px-3 py-2"
-                onChange={(e) => {
-                  setFormData({ ...formData, inTime: e.target.value });
-                  calculateHours(e.target.value, formData.outTime);
-                }}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Out Time *</label>
-              <input
-                type="time"
-                className="w-full border rounded px-3 py-2"
-                onChange={(e) => {
-                  setFormData({ ...formData, outTime: e.target.value });
-                  calculateHours(formData.inTime, e.target.value);
-                }}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Hour(s)</label>
-              <input
-                type="text"
-                value={hours}
-                disabled
-                className="w-full border rounded px-3 py-2 bg-gray-100"
-              />
-            </div>
+          {/* Row 2: Description */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium mb-1">Reason *</label>
+            <textarea
+              maxLength={500}
+              placeholder="Enter your reason for work from home"
+              className="w-full border rounded px-3 py-2 h-32"
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+            />
           </div>
 
-          {/* Row 3: Description + Upload */}
-          <div className="grid grid-cols-2 gap-6 mb-6">
-            <div>
-              <label className="block text-sm font-medium mb-1">Description *</label>
-              <textarea
-                maxLength={500}
-                placeholder="Enter your message here"
-                className="w-full border rounded px-3 py-2 h-32"
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Upload Supporting Document</label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-emerald-500 hover:bg-emerald-50 transition">
-                <input
-                  type="file"
-                  id="file-upload"
-                  accept=".jpg,.jpeg,.png,.pdf"
-                  onChange={(e) => {
-                    const file = e.target.files ? e.target.files[0] : null;
-                    setFormData({
-                      ...formData,
-                      file,
+          {/* Row 3: File Upload */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium mb-2">Upload Supporting Document (Optional)</label>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-emerald-500 hover:bg-emerald-50 transition">
+              <input
+                type="file"
+                id="file-upload"
+                accept=".jpg,.jpeg,.png,.pdf"
+                onChange={(e) => {
+                  const file = e.target.files ? e.target.files[0] : null;
+                  setFormData({
+                    ...formData,
+                    file,
+                  });
+                  if (file) {
+                    const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                    setFilePreview({
+                      name: file.name,
+                      size: `${sizeMB} MB`,
+                      type: file.type.split("/")[1] || "file",
                     });
-                    if (file) {
-                      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-                      setFilePreview({
-                        name: file.name,
-                        size: `${sizeMB} MB`,
-                        type: file.type.split("/")[1] || "file",
-                      });
-                    }
-                  }}
-                  className="hidden"
-                />
-                <label htmlFor="file-upload" className="cursor-pointer">
-                  {filePreview ? (
-                    <div className="space-y-2">
-                      <div className="text-emerald-600 font-semibold text-lg">✓ File Selected</div>
-                      <p className="text-gray-700 font-medium">{filePreview.name}</p>
-                      <p className="text-sm text-gray-500">{filePreview.size}</p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormData({ ...formData, file: null });
-                          setFilePreview(null);
-                        }}
-                        className="text-red-600 text-sm mt-2 hover:underline"
-                      >
-                        Remove file
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="text-2xl">📎</div>
-                      <div className="text-gray-700 font-medium">Click to upload or drag and drop</div>
-                      <p className="text-sm text-gray-500">PNG, JPG or PDF (Max 5MB)</p>
-                    </div>
-                  )}
-                </label>
-              </div>
+                  } else {
+                    setFilePreview(null);
+                  }
+                }}
+                className="hidden"
+              />
+              <label htmlFor="file-upload" className="cursor-pointer">
+                {filePreview ? (
+                  <div className="space-y-2">
+                    <div className="text-emerald-600 font-semibold text-lg">✓ File Selected</div>
+                    <p className="text-gray-700 font-medium">{filePreview.name}</p>
+                    <p className="text-sm text-gray-500">{filePreview.size}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData({ ...formData, file: null });
+                        setFilePreview(null);
+                      }}
+                      className="text-red-600 text-sm mt-2 hover:underline"
+                    >
+                      Remove file
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="text-2xl">📎</div>
+                    <div className="text-gray-700 font-medium">Click to upload or drag and drop</div>
+                    <p className="text-sm text-gray-500">PNG, JPG or PDF (Max 5MB)</p>
+                  </div>
+                )}
+              </label>
             </div>
           </div>
 
