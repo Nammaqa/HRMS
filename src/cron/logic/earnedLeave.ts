@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { startOfMonth, getMonth, getYear } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
+import { sendMailViaVercel } from "../../utils/vercelMailer";
 
 interface ExecutionSummary {
   totalUsers: number;
@@ -114,6 +115,34 @@ export async function executeEarnedLeaveAccrual(
             },
           });
         });
+
+        if (balance.user?.email) {
+          try {
+            console.log(`[EARNED_LEAVE] Sending accrual email to ${balance.user.email}`);
+            await sendMailViaVercel({
+              to: balance.user.email,
+              subject: "Earned Leave Accrued",
+              html: `
+                <p>Dear ${balance.user.name || "Team Member"},</p>
+                <p>Your earned leave balance has been updated by ${MONTHLY_ACCRUAL} days.</p>
+                <p>Your new earned leave balance is <strong>${Math.min(
+                  balance.earnedLeave + MONTHLY_ACCRUAL,
+                  30
+                )} days</strong>.</p>
+                <p>If you have any questions, please contact HR.</p>
+                <p>Regards,<br/>HR Team</p>
+              `,
+            });
+            console.log(`[EARNED_LEAVE] Email sent successfully to ${balance.user.email}`);
+          } catch (err) {
+            console.error(
+              `[EARNED_LEAVE] Email failed for ${balance.userId} (${balance.user.email}):`,
+              err
+            );
+          }
+        } else {
+          console.warn(`[EARNED_LEAVE] No email found for user ${balance.userId}`);
+        }
 
         summary.successCount++;
       } catch (error) {
