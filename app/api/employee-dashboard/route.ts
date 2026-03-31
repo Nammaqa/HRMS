@@ -223,17 +223,45 @@ export async function GET(request: NextRequest) {
         description: true,
         status: true,
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { date: "asc" }, // Changed to order by date for grouping
     });
 
-    // Format WFH requests
-    const formattedWFH = wfhRequests.map((wfh) => ({
-      id: wfh.id,
-      status: wfh.status.toLowerCase(),
-      startDate: wfh.date.toISOString().split("T")[0],
-      endDate: wfh.date.toISOString().split("T")[0],
-      reason: wfh.description || "",
-    }));
+    // Group WFH requests into ranges
+    const groupWFHRequests = (requests: typeof wfhRequests) => {
+      if (requests.length === 0) return [];
+
+      const groups: typeof requests[] = [];
+      let currentGroup = [requests[0]];
+
+      for (let i = 1; i < requests.length; i++) {
+        const prevDate = new Date(currentGroup[currentGroup.length - 1].date);
+        const currDate = new Date(requests[i].date);
+        const diffDays = (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24);
+
+        // Check if consecutive, same status, and same description
+        if (
+          diffDays === 1 &&
+          requests[i].status === currentGroup[0].status &&
+          requests[i].description === currentGroup[0].description
+        ) {
+          currentGroup.push(requests[i]);
+        } else {
+          groups.push(currentGroup);
+          currentGroup = [requests[i]];
+        }
+      }
+      groups.push(currentGroup);
+
+      return groups.map((group) => ({
+        id: group[0].id, // Use first request's ID
+        status: group[0].status.toLowerCase(),
+        startDate: group[0].date.toISOString().split("T")[0],
+        endDate: group[group.length - 1].date.toISOString().split("T")[0],
+        reason: group[0].description || "",
+      }));
+    };
+
+    const formattedWFH = groupWFHRequests(wfhRequests);
 
     // Fetch all employees with birthdays (excluding current user)
     const allEmployees = await prisma.user.findMany({
