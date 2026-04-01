@@ -10,7 +10,7 @@ const http = require('http');
 const https = require('https');
 
 const TIMEZONE = 'Asia/Kolkata';
-const API_URL = `${process.env.API_URL}/api/mail/morning-reminder`;
+const API_URL = process.env.API_URL || 'https://hrms.wizzybox.in';
 
 console.log('[CRON] Morning Reminder Worker Started');
 
@@ -33,7 +33,7 @@ const morningTask = cron.schedule(
 
 async function callMorningReminderAPI() {
   return new Promise((resolve, reject) => {
-    const url = `${API_URL}/api/morning-reminder`;
+    const url = `${API_URL}/api/mail/morning-reminder`;
     const protocol = url.startsWith('https') ? https : http;
 
     protocol.get(url, (res) => {

@@ -10,7 +10,7 @@ const http = require('http');
 const https = require('https');
 
 const TIMEZONE = 'Asia/Kolkata';
-const API_URL = `${process.env.API_URL}/api/mail/add-earned-leave`;
+const API_URL = process.env.API_URL || 'https://hrms.wizzybox.in';
 
 console.log('[CRON] Earned Leave Accrual Worker Started');
 
@@ -33,7 +33,7 @@ const earnedLeaveTask = cron.schedule(
 
 async function callEarnedLeaveAPI() {
   return new Promise((resolve, reject) => {
-    const url = API_URL;
+    const url = `${API_URL}/api/mail/add-earned-leave`;
     const protocol = url.startsWith('https') ? https : http;
 
     protocol.get(url, (res) => {
