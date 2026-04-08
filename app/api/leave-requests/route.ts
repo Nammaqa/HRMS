@@ -300,8 +300,8 @@ export async function GET(request: NextRequest) {
     });
 
     const formattedData = leaveRequests.map((req) => ({
-      id: req.id,
-      employeeId: req.user.employeeId || req.user.id,
+      id: String(req.id),
+      employeeId: req.user.employeeId || String(req.user.id),
       employeeName: `${req.user.firstName} ${req.user.lastName}`.trim(),
       type: "leave" as const,
       startDate: req.startDate.toISOString().split("T")[0],

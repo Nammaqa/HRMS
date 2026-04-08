@@ -6,10 +6,12 @@ const prisma = new PrismaClient();
 async function main() {
   // Clear old data (order matters because of relations)
   await prisma.auditLog.deleteMany({});
+  await prisma.notification.deleteMany({});
   await prisma.leaveBalance.deleteMany({});
   await prisma.wFHRequest.deleteMany({});
   await prisma.leaveRequest.deleteMany({});
   await prisma.attendance.deleteMany({});
+  await prisma.weekendHolidayAttendance.deleteMany({});
   await prisma.user.deleteMany({});
 
   // Hash passwords

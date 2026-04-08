@@ -211,68 +211,28 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      orderBy: { userId: "asc", date: "asc" }, // Order by user then date for grouping
+      orderBy: { createdAt: "desc" }, // Order by creation date, most recent first
     });
 
-    // Group WFH requests by user and then by consecutive dates
-    const groupWFHRequests = (requests: typeof wfhRequests) => {
-      const userGroups: { [userId: number]: typeof requests } = {};
-      
-      // Group by user
-      requests.forEach(req => {
-        if (!userGroups[req.userId]) {
-          userGroups[req.userId] = [];
-        }
-        userGroups[req.userId].push(req);
-      });
+    console.log("DEBUG WFH API - Total WFH Records Found:", wfhRequests.length);
+    console.log("DEBUG WFH API - Raw WFH Requests:", JSON.stringify(wfhRequests, null, 2));
 
-      const grouped: any[] = [];
+    // For now, let's return individual requests instead of grouping
+    const formattedData = wfhRequests.map(req => ({
+      id: String(req.id),
+      employeeId: req.user.employeeId || String(req.user.id),
+      employeeName: `${req.user.firstName} ${req.user.lastName}`.trim(),
+      type: "wfh" as const,
+      startDate: req.date.toISOString().split("T")[0],
+      endDate: req.date.toISOString().split("T")[0], // Single day for now
+      reason: req.description || "",
+      status: req.status.toLowerCase() as "pending" | "approved" | "rejected",
+      createdAt: req.createdAt.toISOString().split("T")[0],
+      attachmentUrl: req.attachmentUrl || undefined,
+    }));
 
-      Object.values(userGroups).forEach(userRequests => {
-        if (userRequests.length === 0) return;
-
-        const groups: typeof userRequests[] = [];
-        let currentGroup = [userRequests[0]];
-
-        for (let i = 1; i < userRequests.length; i++) {
-          const prevDate = new Date(currentGroup[currentGroup.length - 1].date);
-          const currDate = new Date(userRequests[i].date);
-          const diffDays = (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24);
-
-          // Check if consecutive, same status, and same description
-          if (
-            diffDays === 1 &&
-            userRequests[i].status === currentGroup[0].status &&
-            userRequests[i].description === currentGroup[0].description
-          ) {
-            currentGroup.push(userRequests[i]);
-          } else {
-            groups.push(currentGroup);
-            currentGroup = [userRequests[i]];
-          }
-        }
-        groups.push(currentGroup);
-
-        groups.forEach(group => {
-          grouped.push({
-            id: group[0].id, // Use first request's ID
-            employeeId: group[0].user.employeeId || group[0].user.id,
-            employeeName: `${group[0].user.firstName} ${group[0].user.lastName}`.trim(),
-            type: "wfh" as const,
-            startDate: group[0].date.toISOString().split("T")[0],
-            endDate: group[group.length - 1].date.toISOString().split("T")[0],
-            reason: group[0].description,
-            status: group[0].status.toLowerCase() as "pending" | "approved" | "rejected",
-            createdAt: group[0].createdAt.toISOString().split("T")[0], // Use first request's createdAt
-            attachmentUrl: group[0].attachmentUrl || undefined,
-          });
-        });
-      });
-
-      return grouped;
-    };
-
-    const formattedData = groupWFHRequests(wfhRequests);
+    console.log("DEBUG WFH API - Formatted Data Count:", formattedData.length);
+    console.log("DEBUG WFH API - Formatted Data:", JSON.stringify(formattedData, null, 2));
 
     return NextResponse.json({
       success: true,
