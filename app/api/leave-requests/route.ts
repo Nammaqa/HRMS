@@ -200,21 +200,7 @@ export async function POST(request: NextRequest) {
         );
       }
     } else if (typedLeaveType === "LOSS_OF_PAY") {
-      // LOP always allowed (Loss of Pay)
-      // Check if EL, Sick, Special are exhausted
-      if (
-        leaveBalance.earnedLeave > 0 ||
-        leaveBalance.sickLeave > 0 ||
-        leaveBalance.specialLeave > 0
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "You still have Earned, Sick, or Special leaves available. Please use those first.",
-          },
-          { status: 400 }
-        );
-      }
+      // LOP is always allowed; do not require any other leave balances to be exhausted.
     }
 
     // Create leave request
