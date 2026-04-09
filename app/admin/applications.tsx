@@ -14,46 +14,17 @@ interface Application {
   reason: string;
   status: "pending" | "approved" | "rejected";
   createdAt: string;
+  leaveType?: string;
+  totalDays?: number;
+  attachmentUrl?: string;
 }
 
 export default function ApplicationsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [applications, setApplications] = useState<Application[]>([
-    {
-      id: "APP001",
-      employeeId: "EMP001",
-      employeeName: "John Doe",
-      type: "leave",
-      startDate: "2026-01-15",
-      endDate: "2026-01-16",
-      reason: "Medical appointment",
-      status: "pending",
-      createdAt: "2026-01-11",
-    },
-    {
-      id: "APP002",
-      employeeId: "EMP002",
-      employeeName: "Jane Smith",
-      type: "wfh",
-      startDate: "2026-01-12",
-      endDate: "2026-01-12",
-      reason: "Doctor's appointment",
-      status: "pending",
-      createdAt: "2026-01-11",
-    },
-    {
-      id: "APP003",
-      employeeId: "EMP003",
-      employeeName: "Mike Johnson",
-      type: "leave",
-      startDate: "2026-01-20",
-      endDate: "2026-01-22",
-      reason: "Personal work",
-      status: "pending",
-      createdAt: "2026-01-10",
-    },
-  ]);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -72,6 +43,8 @@ export default function ApplicationsPage() {
           return;
         }
 
+        // Load applications after auth check
+        await fetchApplications();
         setLoading(false);
       } catch (error) {
         console.error("Auth check failed:", error);
@@ -81,6 +54,60 @@ export default function ApplicationsPage() {
 
     checkAuth();
   }, [router]);
+
+  const fetchApplications = async () => {
+    try {
+      setError(null);
+      const [leaveResponse, wfhResponse] = await Promise.all([
+        fetch("/api/leave-requests", { credentials: "include" }),
+        fetch("/api/wfh", { credentials: "include" })
+      ]);
+
+      console.log("Leave Response Status:", leaveResponse.status);
+      console.log("WFH Response Status:", wfhResponse.status);
+
+      if (!leaveResponse.ok) {
+        const leaveError = await leaveResponse.text();
+        console.error("Leave API Error:", leaveError);
+        throw new Error(`Leave API failed: ${leaveResponse.status}`);
+      }
+
+      if (!wfhResponse.ok) {
+        const wfhError = await wfhResponse.text();
+        console.error("WFH API Error:", wfhError);
+        throw new Error(`WFH API failed: ${wfhResponse.status}`);
+      }
+
+      const leaveData = await leaveResponse.json();
+      const wfhData = await wfhResponse.json();
+
+      // Store debug info
+      setDebugInfo({
+        leaveApi: { status: leaveResponse.status, data: leaveData },
+        wfhApi: { status: wfhResponse.status, data: wfhData },
+      });
+
+      console.log("Leave Data:", leaveData);
+      console.log("WFH Data:", wfhData);
+
+      const leaveApplications: Application[] = leaveData.data || [];
+      const wfhApplications: Application[] = wfhData.data || [];
+
+      console.log("Leave Applications Count:", leaveApplications.length);
+      console.log("WFH Applications Count:", wfhApplications.length);
+
+      // Combine and sort by created date (most recent first)
+      const allApplications = [...leaveApplications, ...wfhApplications].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+
+      console.log("Total Applications:", allApplications.length);
+      setApplications(allApplications);
+    } catch (error) {
+      console.error("Error fetching applications:", error);
+      setError(`Failed to load applications: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
+  };
 
   if (loading) {
     return (
@@ -94,16 +121,56 @@ export default function ApplicationsPage() {
   }
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "approved" | "rejected">("pending");
 
-  const handleApprove = (id: string) => {
-    setApplications(
-      applications.map((app) => (app.id === id ? { ...app, status: "approved" } : app))
-    );
+  const handleApprove = async (id: string, type: "leave" | "wfh") => {
+    try {
+      const endpoint = type === "leave" ? `/api/leave-requests/${id}` : `/api/wfh/${id}`;
+      const response = await fetch(endpoint, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "APPROVED" }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to approve application");
+      }
+
+      // Update local state
+      setApplications(
+        applications.map((app) =>
+          app.id === id ? { ...app, status: "approved" } : app
+        )
+      );
+    } catch (error) {
+      console.error("Error approving application:", error);
+      alert("Failed to approve application. Please try again.");
+    }
   };
 
-  const handleReject = (id: string) => {
-    setApplications(
-      applications.map((app) => (app.id === id ? { ...app, status: "rejected" } : app))
-    );
+  const handleReject = async (id: string, type: "leave" | "wfh") => {
+    try {
+      const endpoint = type === "leave" ? `/api/leave-requests/${id}` : `/api/wfh/${id}`;
+      const response = await fetch(endpoint, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "REJECTED" }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to reject application");
+      }
+
+      // Update local state
+      setApplications(
+        applications.map((app) =>
+          app.id === id ? { ...app, status: "rejected" } : app
+        )
+      );
+    } catch (error) {
+      console.error("Error rejecting application:", error);
+      alert("Failed to reject application. Please try again.");
+    }
   };
 
   const filteredApplications = applications.filter(
@@ -135,6 +202,13 @@ export default function ApplicationsPage() {
           <h1 className="text-4xl font-bold text-gray-900">Applications</h1>
           <p className="text-gray-600 mt-2">Review and manage employee leave and WFH requests</p>
         </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-800">{error}</p>
+          </div>
+        )}
 
         {/* Filter Tabs */}
         <div className="bg-white rounded-lg shadow-md p-4 mb-6 border border-gray-100 flex gap-2 flex-wrap">
@@ -206,14 +280,14 @@ export default function ApplicationsPage() {
               {app.status === "pending" && (
                 <div className="flex gap-2">
                   <button
-                    onClick={() => handleApprove(app.id)}
+                    onClick={() => handleApprove(app.id, app.type)}
                     className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg flex items-center gap-2 transition-colors"
                   >
                     <Check className="w-4 h-4" />
                     Approve
                   </button>
                   <button
-                    onClick={() => handleReject(app.id)}
+                    onClick={() => handleReject(app.id, app.type)}
                     className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-lg flex items-center gap-2 transition-colors"
                   >
                     <X className="w-4 h-4" />
@@ -231,6 +305,16 @@ export default function ApplicationsPage() {
             <p className="text-gray-500 text-lg">No {filterStatus !== "all" ? filterStatus : ""} applications</p>
           </div>
         )}
+
+        {/* Debug Info */}
+        <div className="mt-8 bg-gray-100 rounded-lg p-4">
+          <details className="cursor-pointer">
+            <summary className="font-semibold text-gray-800">Debug Info</summary>
+            <div className="mt-4 text-xs text-gray-700 bg-white p-3 rounded border border-gray-300 overflow-auto max-h-60">
+              <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
+            </div>
+          </details>
+        </div>
       </div>
     </div>
   );
