@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "WizzyBox Attendance",
-  description: "Attendance Management System",
+  title: "WizzyBox HRMS",
+  description: "HR Management System",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Attendance",
+    title: "HRMS",
   },
   formatDetection: {
     telephone: false,
