@@ -415,7 +415,7 @@ function EmployeeDetailsModal({
                   {employee.bloodGroup || "-"}
                 </div>
               </div>
-            </div>
+            </div>  
 
             {/* Company Information */}
             <div>
