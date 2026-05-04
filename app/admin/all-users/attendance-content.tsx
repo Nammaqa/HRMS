@@ -65,8 +65,12 @@ export default function AttendanceManagement() {
 
   useEffect(() => {
     fetchEmployees();
-    fetchAttendance();
   }, []);
+
+  // Fetch attendance whenever selectedDate changes
+  useEffect(() => {
+    fetchAttendance(selectedDate);
+  }, [selectedDate]);
 
   const fetchEmployees = async () => {
     try {
@@ -89,10 +93,16 @@ export default function AttendanceManagement() {
     }
   };
 
-  const fetchAttendance = async () => {
+  const fetchAttendance = async (date: string) => {
     try {
       setLoading(true);
-      const response = await fetch("/api/attendance", {
+      // Build URL with date filter - fetch records for the selected date only
+      const url = new URL("/api/attendance", window.location.origin);
+      url.searchParams.append("startDate", date);
+      url.searchParams.append("endDate", date);
+      url.searchParams.append("limit", "500"); // Increase limit to ensure we get all records for the date
+
+      const response = await fetch(url.toString(), {
         method: "GET",
         credentials: "include",
         headers: {
