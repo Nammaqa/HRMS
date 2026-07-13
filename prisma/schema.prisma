@@ -130,6 +130,29 @@ model User {
   leaveBalance              LeaveBalance?
   auditLogs                 AuditLog[]                 @relation("AdminActions")
   notifications             Notification[]
+  policies                  Policy[]
+}
+
+// ==============================
+// POLICY MANAGEMENT
+// ==============================
+
+model Policy {
+  id               Int      @id @default(autoincrement())
+  title            String
+  description      String?
+  fileName         String
+  fileUrl          String
+  publicId         String
+  mimeType         String
+  fileSize         Int
+  downloadEnabled  Boolean  @default(false)
+  uploadedById     Int
+  uploadedBy       User     @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([uploadedById])
 }
 
 // ==============================

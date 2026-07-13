@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/jwt";
 import { cookies } from "next/headers";
+import {
+  countWorkingDays,
+  getDateKey,
+  normalizeDateOnly,
+  calculateAttendanceStats,
+} from "@/lib/attendanceCalculations";
 
 /**
  * GET /api/employee-dashboard
@@ -68,6 +74,8 @@ export async function GET(request: NextRequest) {
         location: true,
         dateOfBirth: true,
         lastLoginAt: true,
+        dateOfJoining: true,
+        dateOfExit: true,
       },
     });
 
@@ -97,27 +105,54 @@ export async function GET(request: NextRequest) {
     const startOfYear = new Date(today.getFullYear(), 0, 1);
     const endOfYear = new Date(today.getFullYear(), 11, 31);
 
-    // Fetch attendance statistics for current year
-    const attendanceStats = await prisma.attendance.findMany({
+    // Fetch holidays for the current year so we can exclude them from working-day counts
+    const holidayRecords = await prisma.holiday.findMany({
+      select: {
+        date: true,
+      },
+    });
+    const holidayDates = new Set(holidayRecords.map((holiday) => getDateKey(holiday.date)));
+
+    // Fetch attendance records for current year up to today
+    const attendanceRecords = await prisma.attendance.findMany({
       where: {
         userId,
         date: {
           gte: startOfYear,
-          lte: endOfYear,
+          lte: today,
         },
       },
       select: {
         status: true,
+        date: true,
       },
     });
 
-    // Calculate stats
-    const stats = {
-      presentDays: attendanceStats.filter(a => a.status === "FULL_DAY").length,
-      absentDays: attendanceStats.filter(a => a.status === "ABSENT").length,
-      leavesDays: attendanceStats.filter(a => a.status === "LEAVE").length,
-      workFromHomeDays: attendanceStats.filter(a => a.status === "WFH").length,
+    // Fetch approved leave and WFH requests for accurate absent calculation
+    const approvedLeaveRequestsForCalc = await prisma.leaveRequest.findMany({
+      where: { userId, status: "APPROVED" },
+      select: { startDate: true, endDate: true },
+    });
+
+    const approvedWfhRequestsForCalc = await prisma.wFHRequest.findMany({
+      where: { userId, status: "APPROVED" },
+      select: { date: true },
+    });
+
+    // Build user data for calculation (includes join/exit dates)
+    const userData = {
+      id: user.id,
+      dateOfJoining: user.dateOfJoining || undefined,
+      dateOfExit: user.dateOfExit || undefined,
     };
+
+    const stats = calculateAttendanceStats(
+      userData as any,
+      attendanceRecords.map((r) => ({ date: new Date(r.date), status: r.status })),
+      approvedLeaveRequestsForCalc.map((r) => ({ startDate: new Date(r.startDate), endDate: new Date(r.endDate) })),
+      approvedWfhRequestsForCalc.map((r) => ({ date: new Date(r.date) })),
+      holidayDates
+    );
 
     // Fetch recent attendance (last 5 days)
     const recentAttendance = await prisma.attendance.findMany({
