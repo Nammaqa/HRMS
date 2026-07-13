@@ -61,7 +61,7 @@ const getPreviewUrl = (policy: PolicyRecord) => {
   const ext = getFileExtension(policy.fileName);
 
   if (ext === "pdf") {
-    return policy.fileUrl;
+    return `${policy.fileUrl}#toolbar=0`;
   }
 
   if (["doc", "docx", "xls", "xlsx", "ppt", "pptx"].includes(ext)) {
@@ -78,6 +78,35 @@ export default function EmployeePolicyPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPolicy, setSelectedPolicy] = useState<PolicyRecord | null>(null);
   const [viewerError, setViewerError] = useState<string | null>(null);
+
+  const selectedPolicyIsPdf = selectedPolicy ? getFileExtension(selectedPolicy.fileName) === "pdf" : false;
+
+  useEffect(() => {
+    if (!selectedPolicyIsPdf) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      if ((event.ctrlKey || event.metaKey) && (key === "p" || key === "s")) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    const handleContextMenu = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (target.closest(".policy-preview-modal")) {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("contextmenu", handleContextMenu);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("contextmenu", handleContextMenu);
+    };
+  }, [selectedPolicyIsPdf]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -283,9 +312,6 @@ export default function EmployeePolicyPage() {
           actions={
             selectedPolicy ? (
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-                {selectedPolicy.downloadEnabled && (
-                  <Button onClick={() => window.open(selectedPolicy.fileUrl, "_blank", "noopener,noreferrer")}>Download</Button>
-                )}
                 <Button variant="outline" onClick={closeViewer}>Close</Button>
               </div>
             ) : null
