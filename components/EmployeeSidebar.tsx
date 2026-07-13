@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, BarChart3, DollarSign, LogOut, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, BarChart3, DollarSign, LogOut, User, FileText } from "lucide-react";
 
 interface EmployeeSidebarProps {
   userName?: string;
@@ -19,6 +19,7 @@ export function EmployeeSidebar({ userName, children }: EmployeeSidebarProps) {
   const menuItems = [
     { label: "Dashboard", href: "/employee/dashboard", icon: BarChart3 },
     { label: "Profile", href: "/employee/profile", icon: User },
+    { label: "Policy", href: "/employee/policy", icon: FileText },
     { label: "Payroll", href: "/employee/payroll", icon: DollarSign },
   ];
 

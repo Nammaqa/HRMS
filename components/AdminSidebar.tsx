@@ -14,6 +14,8 @@ import {
   Bell,
   DollarSign,
   LogOut,
+  BarChart2,
+  FileText,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -29,7 +31,9 @@ export function AdminSidebar({ userName, children }: AdminSidebarProps) {
   const menuItems = [
     { label: "Dashboard", href: "/admin/dashboard", icon: BarChart3 },
     { label: "Employees", href: "/admin/all-users", icon: Users },
+    { label: "Employee Summary", href: "/admin/employee-summary", icon: BarChart2 },
     { label: "Holidays", href: "/admin/holidays", icon: Calendar },
+    { label: "Policy", href: "/admin/policy", icon: FileText },
     { label: "Applications", href: "/admin/applications", icon: ClipboardList },
     { label: "Notifications", href: "/admin/notifications", icon: Bell },
     { label: "Payroll", href: "/admin/payroll", icon: DollarSign, disabled: true },
