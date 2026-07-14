@@ -44,12 +44,13 @@ const fileTypeMeta = {
 };
 
 const getFileExtension = (fileName: string) => {
-  const parts = fileName.split(".");
-  return parts.length > 1 ? parts.at(-1)?.toLowerCase() : "";
+  const normalizedFileName = fileName?.trim() ?? "";
+  const parts = normalizedFileName.split(".");
+  return parts.length > 1 ? parts.at(-1)?.toLowerCase() ?? "" : "";
 };
 
 const getFileTypeMeta = (fileName: string) => {
-  const ext = getFileExtension(fileName);
+  const ext = getFileExtension(fileName) || "";
   return fileTypeMeta[ext as keyof typeof fileTypeMeta] ?? {
     label: ext.toUpperCase() || "FILE",
     color: "bg-slate-50 text-slate-700",
