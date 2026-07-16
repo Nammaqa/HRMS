@@ -148,9 +148,6 @@ export default function AttendanceManagement() {
     }
   };
 
-  // Get today's date
-  const today = new Date().toISOString().split("T")[0];
-
   // Filter attendance based on selected tab and filters
   const getFilteredAttendance = () => {
     let filtered = attendance;
@@ -195,15 +192,15 @@ export default function AttendanceManagement() {
     };
   };
 
-  // Get employees who haven't checked in today
+  // Get employees who haven't checked in on the selected date
   const getNotCheckedInEmployees = () => {
     const dateRecords = attendance.filter((record) => record.date === selectedDate);
     const checkedInIds = new Set(dateRecords.map((r) => r.userId));
     return employees.filter((emp) => !checkedInIds.has(emp.id));
   };
 
-  // Get checked-in employees for today
-  const getTodayCheckedInEmployees = () => {
+  // Get checked-in employees for the selected date
+  const getSelectedDateCheckedInEmployees = () => {
     const dateRecords = attendance.filter((record) => record.date === selectedDate);
     return dateRecords.filter((r) => r.loginTime).sort((a, b) => {
       const timeA = a.loginTime || "";
@@ -215,7 +212,7 @@ export default function AttendanceManagement() {
   const filteredAttendance = getFilteredAttendance();
   const stats = getStatistics();
   const notCheckedInEmployees = getNotCheckedInEmployees();
-  const todayCheckedIn = getTodayCheckedInEmployees();
+  const todayCheckedIn = getSelectedDateCheckedInEmployees();
 
   const totalPages = Math.ceil(filteredAttendance.length / itemsPerPage);
   const paginatedAttendance = filteredAttendance.slice(
@@ -602,7 +599,7 @@ export default function AttendanceManagement() {
           >
             <div className="flex items-center justify-center gap-2">
               <UserCheck className="w-5 h-5" />
-              Today's Attendance
+              Selected Date Attendance
             </div>
           </button>
           <button
@@ -720,7 +717,7 @@ function TodayAttendanceView({
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-4">
           <CheckCircle2 className="w-6 h-6 text-green-600" />
-          <h2 className="text-xl font-bold text-gray-800">Checked In Today ({checkedIn.length})</h2>
+          <h2 className="text-xl font-bold text-gray-800">Checked In on Selected Date ({checkedIn.length})</h2>
         </div>
         {checkedIn.length > 0 ? (
           <div className="overflow-x-auto rounded-lg border border-gray-200">
@@ -766,7 +763,7 @@ function TodayAttendanceView({
         ) : (
           <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
             <CheckCircle2 className="w-12 h-12 text-green-600 mx-auto mb-2" />
-            <p className="text-green-700 font-medium">No check-ins recorded yet for today</p>
+            <p className="text-green-700 font-medium">No check-ins recorded for the selected date</p>
           </div>
         )}
       </div>
@@ -775,7 +772,7 @@ function TodayAttendanceView({
       <div>
         <div className="flex items-center gap-2 mb-4">
           <UserX className="w-6 h-6 text-orange-600" />
-          <h2 className="text-xl font-bold text-gray-800">Not Checked In Today ({notCheckedIn.length})</h2>
+          <h2 className="text-xl font-bold text-gray-800">Not Checked In on Selected Date ({notCheckedIn.length})</h2>
         </div>
         {notCheckedIn.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -794,7 +791,7 @@ function TodayAttendanceView({
         ) : (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
             <CheckCircle2 className="w-12 h-12 text-blue-600 mx-auto mb-2" />
-            <p className="text-blue-700 font-medium">All employees have checked in!</p>
+            <p className="text-blue-700 font-medium">All employees have checked in on the selected date!</p>
           </div>
         )}
       </div>
