@@ -21,8 +21,13 @@ export async function getAuthenticatedUser(request: NextRequest) {
       name: true,
       email: true,
       role: true,
+      employeeStatus: true,
     },
   });
+
+  if (user && user.role !== "admin" && user.employeeStatus === "INACTIVE") {
+    return null;
+  }
 
   return user;
 }

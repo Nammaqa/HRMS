@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorCode, setErrorCode] = useState("");
 
   const router = useRouter();
 
@@ -19,6 +20,7 @@ export default function LoginPage() {
     if (loading) return;
 
     setError("");
+    setErrorCode("");
     setLoading(true);
 
     try {
@@ -32,6 +34,7 @@ export default function LoginPage() {
 
       if (!res.ok) {
         setError(data.error || "Invalid email or password");
+        setErrorCode(data.code || "");
         setLoading(false);
         return;
       }
@@ -215,7 +218,7 @@ Mark attendance, apply for leave, and stay updated—all from one dashboard.
                   </div>
                   <div>
                     <p className="font-medium text-red-800">{error}</p>
-                    <p className="text-red-600/80 text-sm mt-1">Please check your credentials</p>
+                    <p className="text-red-600/80 text-sm mt-1">{errorCode === "ACCOUNT_INACTIVE" ? "Please contact HR for assistance." : "Please check your credentials"}</p>
                   </div>
                 </div>
               </div>

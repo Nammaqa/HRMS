@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
           not: null,
         },
         logoutTime: null,
+        user: { employeeStatus: "ACTIVE" },
       },
       include: {
         user: true,

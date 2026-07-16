@@ -11,6 +11,7 @@ interface Employee {
   password?: string;
   designation?: string;
   role: "admin" | "employee" | "intern";
+  employeeStatus: "ACTIVE" | "INACTIVE";
   dateOfJoining: string;
   firstName?: string;
   middleName?: string;
@@ -80,6 +81,7 @@ export default function EmployeeList() {
     designation: "",
     dateOfJoining: new Date().toISOString().split("T")[0],
     role: "employee",
+    employeeStatus: "ACTIVE",
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -174,6 +176,7 @@ export default function EmployeeList() {
         designation: "",
         dateOfJoining: new Date().toISOString().split("T")[0],
         role: "employee",
+        employeeStatus: "ACTIVE",
       });
       setIsAddModalOpen(false);
 
@@ -243,6 +246,7 @@ export default function EmployeeList() {
         designation: "",
         dateOfJoining: new Date().toISOString().split("T")[0],
         role: "employee",
+        employeeStatus: "ACTIVE",
       });
 
       setTimeout(() => setSuccess(""), 3000);
@@ -255,6 +259,26 @@ export default function EmployeeList() {
     }
   };
 
+  const handleStatusChange = async (employee: Employee) => {
+    const nextStatus = employee.employeeStatus === "INACTIVE" ? "ACTIVE" : "INACTIVE";
+    if (nextStatus === "INACTIVE" && !confirm(`Mark ${employee.name} as inactive? They will be signed out and will no longer receive employee emails.`)) return;
+
+    try {
+      const response = await fetch(`/api/employees/${employee.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ employeeStatus: nextStatus }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to update employee status");
+      setEmployees((prev) => prev.map((item) => item.id === employee.id ? { ...item, employeeStatus: data.employeeStatus } : item));
+      setSuccess(`${employee.name} is now ${nextStatus.toLowerCase()}.`);
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update employee status");
+    }
+  };
   const handleDeleteEmployee = async (employeeId: string) => {
     if (!confirm("Are you sure you want to delete this employee?")) return;
 
@@ -328,6 +352,7 @@ export default function EmployeeList() {
                 designation: "",
                 dateOfJoining: new Date().toISOString().split("T")[0],
                 role: "employee",
+        employeeStatus: "ACTIVE",
               });
             }}
             className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg flex items-center gap-2 transition-colors"
@@ -455,6 +480,9 @@ export default function EmployeeList() {
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 whitespace-nowrap">
                     BGV
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 whitespace-nowrap">
+                    Status
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 whitespace-nowrap">
                     Actions
@@ -597,6 +625,15 @@ export default function EmployeeList() {
                       >
                         {employee.bgvProvided ? "Yes" : "No"}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <button
+                        onClick={() => handleStatusChange(employee)}
+                        className={`px-3 py-1 rounded-full text-xs font-semibold ${employee.employeeStatus === "INACTIVE" ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}`}
+                        title="Change employee status"
+                      >
+                        {employee.employeeStatus === "INACTIVE" ? "Inactive" : "Active"}
+                      </button>
                     </td>
                     <td className="px-4 py-3 flex gap-2 sticky right-0 bg-white">
                       <button

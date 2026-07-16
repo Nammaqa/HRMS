@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
@@ -36,6 +37,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (user.role !== "admin" && user.employeeStatus === "INACTIVE") {
+      return NextResponse.json(
+        { error: "Your account is inactive. Please contact HR.", code: "ACCOUNT_INACTIVE" },
+        { status: 403 }
+      );
+    }
     // Generate JWT token with role (ensure numeric ID)
     const token = generateToken({
       userId: Number(user.id),

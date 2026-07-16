@@ -20,6 +20,7 @@ export async function GET(
         email: true,
         designation: true,
         role: true,
+        employeeStatus: true,
         dateOfJoining: true,
         firstName: true,
         middleName: true,
@@ -104,6 +105,15 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
+    if (
+      body.employeeStatus !== undefined &&
+      !["ACTIVE", "INACTIVE"].includes(String(body.employeeStatus).toUpperCase())
+    ) {
+      return NextResponse.json(
+        { error: "Employee status must be ACTIVE or INACTIVE" },
+        { status: 400 }
+      );
+    }
     // Create updateData object with proper type conversion
     const updateData: any = {};
 
@@ -154,7 +164,7 @@ export async function PUT(
       }
       // Handle string fields (but don't process password yet, we'll hash it separately)
       else if (key !== "password") {
-        updateData[key] = value;
+        updateData[key] = key === "employeeStatus" ? String(value).toUpperCase() : value;
       }
     });
 
@@ -264,6 +274,7 @@ export async function PUT(
         email: true,
         designation: true,
         role: true,
+        employeeStatus: true,
         dateOfJoining: true,
         firstName: true,
         middleName: true,

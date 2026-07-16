@@ -47,6 +47,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Get request body
+    const activeUser = await prisma.user.findFirst({
+      where: { id: Number(userId), employeeStatus: "ACTIVE" },
+      select: { id: true },
+    });
+    if (!activeUser) {
+      return NextResponse.json(
+        { success: false, error: "Your account is inactive. Please contact HR.", code: "ACCOUNT_INACTIVE" },
+        { status: 403 }
+      );
+    }
     const body = await request.json();
     const {
       startDate,

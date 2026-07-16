@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
       where: {
         user: {
           role: "employee",
+          employeeStatus: "ACTIVE",
         },
       },
       include: {
