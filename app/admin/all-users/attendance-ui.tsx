@@ -277,5 +277,3 @@ export function AttendanceCreateModal({
     </div>
   );
 }
-
-// .
