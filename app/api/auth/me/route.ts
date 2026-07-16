@@ -52,6 +52,7 @@ export async function GET(request: NextRequest) {
         name: true,
         email: true,
         role: true,
+        employeeStatus: true,
         
         // Personal Information
         firstName: true,
@@ -135,6 +136,15 @@ export async function GET(request: NextRequest) {
         { error: "User not found" },
         { status: 404 }
       );
+    }
+
+    if (user.role !== "admin" && user.employeeStatus === "INACTIVE") {
+      const response = NextResponse.json(
+        { error: "Your account is inactive. Please contact HR.", code: "ACCOUNT_INACTIVE" },
+        { status: 403 }
+      );
+      response.cookies.delete("token");
+      return response;
     }
 
     return NextResponse.json({ user }, { status: 200 });

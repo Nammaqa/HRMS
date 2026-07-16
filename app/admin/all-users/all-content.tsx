@@ -85,6 +85,7 @@ interface Employee {
   bgvProvided?: boolean;
   previousCompany?: string;
   role: string;
+  employeeStatus: "ACTIVE" | "INACTIVE";
   password?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -218,6 +219,39 @@ function EmployeeSection() {
     }
   };
 
+  const handleStatusChange = async (employee: Employee) => {
+    const nextStatus = employee.employeeStatus === "INACTIVE" ? "ACTIVE" : "INACTIVE";
+
+    if (
+      nextStatus === "INACTIVE" &&
+      !confirm(`Mark ${employee.name} as inactive? They will not be able to log in or receive employee emails.`)
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/employees/${employee.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ employeeStatus: nextStatus }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update employee status");
+      }
+
+      setEmployees((current) =>
+        current.map((item) =>
+          item.id === employee.id
+            ? { ...item, employeeStatus: data.employeeStatus }
+            : item
+        )
+      );
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to update employee status");
+    }
+  };
   const filteredEmployees = employees.filter((emp) =>
     emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -289,6 +323,7 @@ function EmployeeSection() {
               <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
               <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Designation</th>
               <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Location</th>
+              <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">Status</th>
               <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">Actions</th>
             </tr>
           </thead>
@@ -300,6 +335,20 @@ function EmployeeSection() {
                 <td className="px-6 py-4 text-sm text-gray-600">{emp.email}</td>
                 <td className="px-6 py-4 text-sm text-gray-600">{emp.designation || "-"}</td>
                 <td className="px-6 py-4 text-sm text-gray-600">{emp.location || "-"}</td>
+                <td className="px-6 py-4 text-center">
+                  <button
+                    type="button"
+                    onClick={() => handleStatusChange(emp)}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                      emp.employeeStatus === "INACTIVE"
+                        ? "bg-red-100 text-red-800 hover:bg-red-200"
+                        : "bg-green-100 text-green-800 hover:bg-green-200"
+                    }`}
+                    title="Change employee status"
+                  >
+                    {emp.employeeStatus === "INACTIVE" ? "Inactive" : "Active"}
+                  </button>
+                </td>
                 <td className="px-6 py-4 text-center flex gap-2 justify-center">
                   <button
                     onClick={() => {

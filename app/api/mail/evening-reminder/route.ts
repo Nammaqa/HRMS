@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
         eveningReminderSent: false,
         user: {
           role: "employee",
+          employeeStatus: "ACTIVE",
         },
       },
       include: {
@@ -101,6 +102,7 @@ export async function GET(request: NextRequest) {
           in: ["APPROVED", "REJECTED"],
         },
         notificationSent: false,
+        user: { employeeStatus: "ACTIVE" },
       },
       include: {
         user: true,
@@ -173,6 +175,7 @@ export async function GET(request: NextRequest) {
           in: ["APPROVED", "REJECTED"],
         },
         notificationSent: false,
+        user: { employeeStatus: "ACTIVE" },
       },
       include: {
         user: true,

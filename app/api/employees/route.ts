@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
         designation: true,
         profileImageUrl: true,
         role: true,
+        employeeStatus: true,
         dateOfJoining: true,
         firstName: true,
         middleName: true,
@@ -151,6 +152,7 @@ export async function POST(request: NextRequest) {
       idCardProvided,
       bgvProvided,
       previousCompany,
+      employeeStatus,
     } = body;
 
     // Validation
@@ -164,6 +166,7 @@ export async function POST(request: NextRequest) {
     // Validate role enum
     const validRoles = ["admin", "employee", "intern"];
     const normalizedRole = role.toLowerCase();
+    const normalizedEmployeeStatus = String(employeeStatus || "ACTIVE").toUpperCase();
     
     if (!validRoles.includes(normalizedRole)) {
       return NextResponse.json(
@@ -172,6 +175,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!["ACTIVE", "INACTIVE"].includes(normalizedEmployeeStatus)) {
+      return NextResponse.json(
+        { error: "Employee status must be ACTIVE or INACTIVE" },
+        { status: 400 }
+      );
+    }
     // Check if email already exists
     const existingUser = await prisma.user.findUnique({
       where: { email },
@@ -265,6 +274,7 @@ export async function POST(request: NextRequest) {
         email,
         password: hashedPassword,
         role: normalizedRole as any,
+        employeeStatus: normalizedEmployeeStatus as any,
         firstName,
         middleName,
         lastName,
@@ -328,6 +338,7 @@ export async function POST(request: NextRequest) {
         email: true,
         designation: true,
         role: true,
+        employeeStatus: true,
         dateOfJoining: true,
       },
     });

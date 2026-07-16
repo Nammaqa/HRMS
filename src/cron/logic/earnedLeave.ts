@@ -51,6 +51,7 @@ export async function executeEarnedLeaveAccrual(
       where: {
         user: {
           role: "employee",
+          employeeStatus: "ACTIVE",
         },
       },
       include: {

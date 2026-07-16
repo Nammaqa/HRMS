@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
         morningReminderSent: false,
         user: {
           role: "employee",
+          employeeStatus: "ACTIVE",
         },
       },
       include: {
@@ -44,6 +45,7 @@ export async function GET(request: NextRequest) {
     const usersWithoutAttendance = await prisma.user.findMany({
       where: {
         role: "employee",
+        employeeStatus: "ACTIVE",
         attendances: {
           none: {
             date: {

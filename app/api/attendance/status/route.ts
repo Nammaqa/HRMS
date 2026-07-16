@@ -43,9 +43,15 @@ export async function GET(req: NextRequest) {
     // Get user data
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, name: true, email: true, designation: true },
+      select: { id: true, name: true, email: true, designation: true, employeeStatus: true },
     });
 
+    if (user?.employeeStatus === "INACTIVE") {
+      return NextResponse.json(
+        { success: false, message: "Your account is inactive. Please contact HR.", code: "ACCOUNT_INACTIVE" },
+        { status: 403 }
+      );
+    }
     if (!user) {
       return NextResponse.json(
         { success: false, message: "User not found" },

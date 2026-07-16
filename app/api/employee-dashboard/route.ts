@@ -66,6 +66,7 @@ export async function GET(request: NextRequest) {
         name: true,
         email: true,
         role: true,
+        employeeStatus: true,
         phone: true,
         currentAddress: true,
         profileImageUrl: true,
@@ -81,6 +82,12 @@ export async function GET(request: NextRequest) {
 
     console.log("Dashboard - User found:", !!user);
     console.log("Dashboard - User data:", user);
+    if (user?.role !== "admin" && user?.employeeStatus === "INACTIVE") {
+      return NextResponse.json(
+        { error: "Your account is inactive. Please contact HR.", code: "ACCOUNT_INACTIVE" },
+        { status: 403 }
+      );
+    }
     if (!user) {
       return NextResponse.json(
         { error: "User not found" },
