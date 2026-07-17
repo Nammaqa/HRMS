@@ -3,6 +3,19 @@ import { verifyToken } from "@/lib/jwt";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+const getDisplayName = (user: { name?: string | null; firstName?: string | null; middleName?: string | null; lastName?: string | null }) => {
+  const parts = [user.firstName, user.middleName, user.lastName]
+    .filter(Boolean)
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+
+  if (parts.length > 0) {
+    return parts.join(" ");
+  }
+
+  return user.name?.trim() || "User";
+};
+
 export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get("token")?.value;
@@ -24,6 +37,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+
+    const existingUser = await prisma.user.findUnique({
+      where: { id: typeof payload.userId === 'string' ? parseInt(payload.userId, 10) : payload.userId },
+      select: { name: true, firstName: true, middleName: true, lastName: true },
+    });
 
     // Filter out undefined, null, empty strings and non-updatable fields
     const updateData: any = {};
@@ -94,6 +112,14 @@ export async function POST(request: NextRequest) {
       updateData[key] = finalValue;
     });
 
+    if (body.firstName !== undefined || body.middleName !== undefined || body.lastName !== undefined || body.name !== undefined) {
+      const derivedName = getDisplayName({
+        ...existingUser,
+        ...body,
+      });
+      updateData.name = derivedName;
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id: typeof payload.userId === 'string' ? parseInt(payload.userId, 10) : payload.userId },
       data: updateData,
@@ -158,7 +184,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(updatedUser, { status: 200 });
+    const normalizedUser = {
+      ...updatedUser,
+      name: getDisplayName(updatedUser as any),
+    };
+
+    return NextResponse.json(normalizedUser, { status: 200 });
   } catch (error) {
     console.error("Error updating profile:", error);
     return NextResponse.json(
