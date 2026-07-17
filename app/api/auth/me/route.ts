@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+const getDisplayName = (user: { name?: string | null; firstName?: string | null; middleName?: string | null; lastName?: string | null }) => {
+  const parts = [user.firstName, user.middleName, user.lastName]
+    .filter(Boolean)
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+
+  if (parts.length > 0) {
+    return parts.join(" ");
+  }
+
+  return user.name?.trim() || "User";
+};
+
 // Decode JWT manually without using jsonwebtoken (which doesn't work in Edge Runtime)
 function decodeToken(token: string): { userId: number | string; email: string; role: string } | null {
   try {
@@ -147,7 +160,12 @@ export async function GET(request: NextRequest) {
       return response;
     }
 
-    return NextResponse.json({ user }, { status: 200 });
+    const normalizedUser = {
+      ...user,
+      name: getDisplayName(user),
+    };
+
+    return NextResponse.json({ user: normalizedUser }, { status: 200 });
   } catch (error) {
     console.error("Error fetching user:", error);
     return NextResponse.json(

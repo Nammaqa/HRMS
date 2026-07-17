@@ -9,6 +9,19 @@ import {
   calculateAttendanceStats,
 } from "@/lib/attendanceCalculations";
 
+const getDisplayName = (user: { name?: string | null; firstName?: string | null; middleName?: string | null; lastName?: string | null }) => {
+  const parts = [user.firstName, user.middleName, user.lastName]
+    .filter(Boolean)
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+
+  if (parts.length > 0) {
+    return parts.join(" ");
+  }
+
+  return user.name?.trim() || "User";
+};
+
 /**
  * GET /api/employee-dashboard
  * Fetches complete employee dashboard data including:
@@ -67,6 +80,9 @@ export async function GET(request: NextRequest) {
         email: true,
         role: true,
         employeeStatus: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
         phone: true,
         currentAddress: true,
         profileImageUrl: true,
@@ -98,6 +114,7 @@ export async function GET(request: NextRequest) {
     // Ensure all fields exist (with defaults for new fields)
     const userWithDefaults = {
       ...user,
+      name: getDisplayName(user),
       phone: user.phone || undefined,
       designation: user.designation || undefined,
       bloodGroup: user.bloodGroup || undefined,

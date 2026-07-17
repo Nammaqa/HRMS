@@ -4,26 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { EmployeeSidebar } from "@/components/EmployeeSidebar";
 import {
-  User,
-  Mail,
-  Phone,
-  MapPin,
-  Briefcase,
-  Droplet,
-  Calendar,
-  Clock,
-  ArrowLeft,
-  GraduationCap,
-  CreditCard,
-  DollarSign,
-  FileText,
-  Users,
-  Edit2,
-  Save,
-  X,
-  Upload,
-  Eye,
-  EyeOff,
+  User,Mail,Phone,MapPin,Briefcase,Droplet,Calendar,Clock,
+  ArrowLeft,GraduationCap,CreditCard,DollarSign,FileText,Users,Edit2,
+  Save,X,Upload,Eye,EyeOff,
 } from "lucide-react";
 
 interface UserProfile {
@@ -110,58 +93,132 @@ interface SectionProps {
     label: string;
     key: string;
     value: string | number | boolean | undefined;
-    format?: "date" | "text" | "currency" | "boolean";
+    format?: "date" | "text" | "currency" | "boolean" | "select";
+    options?: Array<{ label: string; value: string }>;
   }>;
   isEditing?: boolean;
   editData?: any;
   onEditChange?: (key: string, value: any) => void;
+  validationErrors?: Record<string, string>;
 }
 
-const InfoSection = ({ title, icon, fields, isEditing, editData, onEditChange }: SectionProps) => (
+const getDisplayName = (user: Partial<UserProfile> | null | undefined) => {
+  const parts = [user?.firstName, user?.middleName, user?.lastName]
+    .filter(Boolean)
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+
+  if (parts.length > 0) {
+    return parts.join(" ");
+  }
+
+  return user?.name?.trim() || "User";
+};
+
+const formatDateInputValue = (value: string | number | boolean | undefined) => {
+  if (!value) return "";
+  if (typeof value !== "string") return "";
+
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+
+  return parsed.toISOString().split("T")[0];
+};
+
+const InfoSection = ({ title, icon, fields, isEditing, editData, onEditChange, validationErrors }: SectionProps) => (
   <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
     <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
       {icon}
       {title}
     </h2>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {fields.map((field, idx) => (
-        <div key={idx}>
-          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-            {field.label}
-          </label>
-          {isEditing ? (
-            field.format === "boolean" ? (
-              <select
-                value={editData?.[field.key] ? "true" : "false"}
-                onChange={(e) => onEditChange?.(field.key, e.target.value === "true")}
-                className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-              >
-                <option value="true">Yes</option>
-                <option value="false">No</option>
-              </select>
-            ) : field.format === "date" ? (
-              <input
-                type="date"
-                value={editData?.[field.key] ? new Date(editData[field.key]).toISOString().split('T')[0] : ''}
-                onChange={(e) => onEditChange?.(field.key, e.target.value)}
-                className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+      {fields.map((field, idx) => {
+        const hasError = Boolean(validationErrors?.[field.key]);
+
+        return (
+          <div key={idx}>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              {field.label}
+            </label>
+            {isEditing ? (
+              field.format === "boolean" ? (
+                <select
+                  value={editData?.[field.key] ? "true" : "false"}
+                  onChange={(e) => onEditChange?.(field.key, e.target.value === "true")}
+                  aria-invalid={hasError}
+                  className={`w-full mt-2 px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent bg-white ${
+                    hasError
+                      ? "border-red-400 focus:ring-red-500"
+                      : "border-gray-300 focus:ring-blue-500"
+                  }`}
+                >
+                  <option value="true">Yes</option>
+                  <option value="false">No</option>
+                </select>
+              ) : field.format === "select" ? (
+                <select
+                  value={editData?.[field.key] ?? ""}
+                  onChange={(e) => onEditChange?.(field.key, e.target.value)}
+                  aria-invalid={hasError}
+                  className={`w-full mt-2 px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent bg-white ${
+                    hasError
+                      ? "border-red-400 focus:ring-red-500"
+                      : "border-gray-300 focus:ring-blue-500"
+                  }`}
+                >
+                  <option value="">Select {field.label}</option>
+                  {field.options?.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              ) : field.format === "date" ? (
+                <input
+                  type="date"
+                  value={formatDateInputValue(editData?.[field.key])}
+                  onChange={(e) => onEditChange?.(field.key, e.target.value)}
+                  aria-invalid={hasError}
+                  className={`w-full mt-2 px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent ${
+                    hasError
+                      ? "border-red-400 focus:ring-red-500"
+                      : "border-gray-300 focus:ring-blue-500"
+                  }`}
+                />
+              ) : (
+                <input
+                  type={field.format === "currency" ? "number" : "text"}
+                  value={editData?.[field.key] ?? ""}
+                  onChange={(e) => onEditChange?.(field.key, e.target.value)}
+                  placeholder={`Enter ${field.label.toLowerCase()}`}
+                  aria-invalid={hasError}
+                  className={`w-full mt-2 px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent ${
+                    hasError
+                      ? "border-red-400 focus:ring-red-500"
+                      : "border-gray-300 focus:ring-blue-500"
+                  }`}
+                />
+              )
             ) : (
-              <input
-                type={field.format === "currency" ? "number" : "text"}
-                value={editData?.[field.key] ?? ""}
-                onChange={(e) => onEditChange?.(field.key, e.target.value)}
-                placeholder={`Enter ${field.label.toLowerCase()}`}
-                className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            )
-          ) : (
-            <p className="text-gray-900 font-medium mt-2">
-              {typeof field.value === "boolean" ? (field.value ? "Yes" : "No") : field.value || "N/A"}
-            </p>
-          )}
-        </div>
-      ))}
+              <p className="text-gray-900 font-medium mt-2">
+                {typeof field.value === "boolean" ? (field.value ? "Yes" : "No") : field.value ?? "N/A"}
+              </p>
+            )}
+            {isEditing && hasError && (
+              <p className="mt-2 text-sm text-red-600">{validationErrors?.[field.key]}</p>
+            )}
+          </div>
+        );
+      })}
     </div>
   </div>
 );
@@ -174,6 +231,8 @@ export default function EmployeeProfile() {
   const [editData, setEditData] = useState<Partial<UserProfile>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   // image upload state
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -189,6 +248,256 @@ export default function EmployeeProfile() {
     fetchProfile();
   }, []);
 
+  const validateProfileData = (data: Partial<UserProfile>) => {
+    const errors: Record<string, string> = {};
+    const today = new Date();
+    const cleanText = (value: string | number | boolean | undefined) =>
+      typeof value === "string" ? value.trim() : "";
+    const validateOptionalText = (value: string | number | boolean | undefined, key: string, label: string) => {
+      const text = cleanText(value);
+      if (text && text.length < 2) {
+        errors[key] = `${label} should be at least 2 characters.`;
+      }
+    };
+    const parseDate = (value?: string) => {
+      if (!value) return null;
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    };
+
+    const firstName = cleanText(data.firstName);
+    if (!firstName) {
+      errors.firstName = "First name is required.";
+    } else if (!/^[A-Za-z][A-Za-z .'-]{1,50}$/.test(firstName)) {
+      errors.firstName = "First name can only contain letters and common separators.";
+    }
+
+    const middleName = cleanText(data.middleName);
+    if (middleName && !/^[A-Za-z .'-]{1,50}$/.test(middleName)) {
+      errors.middleName = "Middle name can only contain letters and common separators.";
+    }
+
+    const lastName = cleanText(data.lastName);
+    if (!lastName) {
+      errors.lastName = "Last name is required.";
+    } else if (!/^[A-Za-z][A-Za-z .'-]{1,50}$/.test(lastName)) {
+      errors.lastName = "Last name can only contain letters and common separators.";
+    }
+
+    const email = cleanText(data.email);
+    if (!email) {
+      errors.email = "Email is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.email = "Please enter a valid email address.";
+    }
+
+    const personalEmail = cleanText(data.personalEmail);
+    if (personalEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(personalEmail)) {
+      errors.personalEmail = "Please enter a valid personal email address.";
+    }
+
+    const phone = cleanText(data.phone);
+    if (!phone) {
+      errors.phone = "Phone number is required.";
+    } else if (!/^\d{10}$/.test(phone)) {
+      errors.phone = "Phone number must be exactly 10 digits.";
+    }
+
+    const alternateContact = cleanText(data.alternateContact);
+    if (alternateContact && !/^\d{10}$/.test(alternateContact)) {
+      errors.alternateContact = "Alternate contact must be exactly 10 digits.";
+    }
+
+    const emergencyContact = cleanText(data.emergencyContact);
+    if (emergencyContact && !/^\d{10}$/.test(emergencyContact)) {
+      errors.emergencyContact = "Emergency contact must be exactly 10 digits.";
+    }
+
+    const currentAddress = cleanText(data.currentAddress);
+    if (!currentAddress) {
+      errors.currentAddress = "Current address is required.";
+    } else if (currentAddress.length < 5) {
+      errors.currentAddress = "Current address should be at least 5 characters.";
+    }
+
+    const permanentAddress = cleanText(data.permanentAddress);
+    if (!permanentAddress) {
+      errors.permanentAddress = "Permanent address is required.";
+    } else if (permanentAddress.length < 5) {
+      errors.permanentAddress = "Permanent address should be at least 5 characters.";
+    }
+
+    const dateOfBirth = parseDate(data.dateOfBirth);
+    if (!data.dateOfBirth) {
+      errors.dateOfBirth = "Date of birth is required.";
+    } else if (!dateOfBirth || dateOfBirth > today) {
+      errors.dateOfBirth = "Date of birth cannot be in the future.";
+    }
+
+    const dateOfMarriage = parseDate(data.dateOfMarriage);
+    if (data.dateOfMarriage && (!dateOfMarriage || dateOfMarriage < (dateOfBirth || new Date(0)))) {
+      errors.dateOfMarriage = "Date of marriage must be after the date of birth.";
+    }
+
+    const gender = cleanText(data.gender);
+    if (gender && !/^(male|female|other|prefer not to say)$/i.test(gender)) {
+      errors.gender = "Please choose a valid gender option.";
+    }
+
+    const bloodGroup = cleanText(data.bloodGroup);
+    if (bloodGroup && !/^(a|b|ab|o)[+-]$/i.test(bloodGroup)) {
+      errors.bloodGroup = "Please choose a valid blood group.";
+    }
+
+    const maritalStatus = cleanText(data.maritalStatus);
+    if (maritalStatus && !/^(single|married)$/i.test(maritalStatus)) {
+      errors.maritalStatus = "Please choose Single or Married.";
+    }
+
+    const citizenship = cleanText(data.citizenship);
+    if (citizenship && citizenship.length < 2) {
+      errors.citizenship = "Citizenship should be at least 2 characters.";
+    }
+
+    const fatherName = cleanText(data.fatherName);
+    if (fatherName && !/^[A-Za-z .'-]{2,50}$/.test(fatherName)) {
+      errors.fatherName = "Father name can only contain letters and common separators.";
+    }
+
+    const motherName = cleanText(data.motherName);
+    if (motherName && !/^[A-Za-z .'-]{2,50}$/.test(motherName)) {
+      errors.motherName = "Mother name can only contain letters and common separators.";
+    }
+
+    const designationAtCompany = cleanText(data.designationAtCompany);
+    if (!designationAtCompany) {
+      errors.designationAtCompany = "Designation is required.";
+    } else if (designationAtCompany.length < 2) {
+      errors.designationAtCompany = "Designation should be at least 2 characters.";
+    }
+
+    const employeeId = cleanText(data.employeeId);
+    if (!employeeId) {
+      errors.employeeId = "Employee ID is required.";
+    } else if (employeeId.length < 2) {
+      errors.employeeId = "Employee ID should be at least 2 characters.";
+    }
+
+    validateOptionalText(data.projectClient, "projectClient", "Project/Client");
+    validateOptionalText(data.previousCompany, "previousCompany", "Previous company");
+    validateOptionalText(data.bankHolderName, "bankHolderName", "Bank holder name");
+    validateOptionalText(data.bankName, "bankName", "Bank name");
+    validateOptionalText(data.bankBranch, "bankBranch", "Bank branch");
+    validateOptionalText(data.laptopProvider, "laptopProvider", "Laptop provider");
+    validateOptionalText(data.assetDetails, "assetDetails", "Asset details");
+    validateOptionalText(data.masterDegree, "masterDegree", "Master degree");
+    validateOptionalText(data.secondaryDegree, "secondaryDegree", "Secondary degree");
+    validateOptionalText(data.twelfthDegree, "twelfthDegree", "12th degree");
+    validateOptionalText(data.tenthDegree, "tenthDegree", "10th degree");
+
+    const dateOfJoining = parseDate(data.dateOfJoining);
+    if (!data.dateOfJoining) {
+      errors.dateOfJoining = "Date of joining is required.";
+    } else if (!dateOfJoining || dateOfJoining > today) {
+      errors.dateOfJoining = "Date of joining cannot be in the future.";
+    }
+
+    const dateOfDeployment = parseDate(data.dateOfDeployment);
+    if (data.dateOfDeployment && (!dateOfDeployment || (dateOfJoining && dateOfDeployment < dateOfJoining))) {
+      errors.dateOfDeployment = "Date of deployment must be on or after the joining date.";
+    }
+
+    const dateOfExit = parseDate(data.dateOfExit);
+    if (data.dateOfExit && (!dateOfExit || (dateOfJoining && dateOfExit < dateOfJoining))) {
+      errors.dateOfExit = "Date of exit must be on or after the joining date.";
+    }
+
+    const totalExperience = data.totalExperience;
+    if (totalExperience !== undefined && totalExperience !== null && String(totalExperience).trim() !== "") {
+      const experienceValue = Number(totalExperience);
+      if (Number.isNaN(experienceValue) || experienceValue < 0 || experienceValue > 60) {
+        errors.totalExperience = "Total experience must be between 0 and 60 years.";
+      }
+    }
+
+    const masterYOP = data.masterYOP;
+    if (masterYOP !== undefined && masterYOP !== null && String(masterYOP).trim() !== "") {
+      const year = Number(masterYOP);
+      if (Number.isNaN(year) || year < 1950 || year > today.getFullYear() + 1) {
+        errors.masterYOP = "Master year of passing should be a valid year.";
+      }
+    }
+
+    const secondaryYOP = data.secondaryYOP;
+    if (secondaryYOP !== undefined && secondaryYOP !== null && String(secondaryYOP).trim() !== "") {
+      const year = Number(secondaryYOP);
+      if (Number.isNaN(year) || year < 1950 || year > today.getFullYear() + 1) {
+        errors.secondaryYOP = "Secondary year of passing should be a valid year.";
+      }
+    }
+
+    const twelfthYOP = data.twelfthYOP;
+    if (twelfthYOP !== undefined && twelfthYOP !== null && String(twelfthYOP).trim() !== "") {
+      const year = Number(twelfthYOP);
+      if (Number.isNaN(year) || year < 1950 || year > today.getFullYear() + 1) {
+        errors.twelfthYOP = "12th year of passing should be a valid year.";
+      }
+    }
+
+    const tenthYOP = data.tenthYOP;
+    if (tenthYOP !== undefined && tenthYOP !== null && String(tenthYOP).trim() !== "") {
+      const year = Number(tenthYOP);
+      if (Number.isNaN(year) || year < 1950 || year > today.getFullYear() + 1) {
+        errors.tenthYOP = "10th year of passing should be a valid year.";
+      }
+    }
+
+    const validatePercentage = (value: string | number | boolean | undefined, key: string) => {
+      if (value === undefined || value === null || value === "") return;
+      const percentage = Number(value);
+      if (Number.isNaN(percentage) || percentage < 0 || percentage > 100) {
+        errors[key] = "Percentage must be between 0 and 100.";
+      }
+    };
+
+    validatePercentage(data.masterPercentage, "masterPercentage");
+    validatePercentage(data.secondaryPercentage, "secondaryPercentage");
+    validatePercentage(data.twelfthPercentage, "twelfthPercentage");
+    validatePercentage(data.tenthPercentage, "tenthPercentage");
+
+    const aadharNumber = cleanText(data.aadharNumber);
+    if (aadharNumber && !/^\d{12}$/.test(aadharNumber)) {
+      errors.aadharNumber = "Aadhar number must be 12 digits.";
+    }
+
+    const panCard = cleanText(data.panCard);
+    if (panCard && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panCard.toUpperCase())) {
+      errors.panCard = "PAN should look like ABCDE1234F.";
+    }
+
+    const bankAccountNumber = cleanText(data.bankAccountNumber);
+    if (bankAccountNumber && !/^[A-Za-z0-9]{8,20}$/.test(bankAccountNumber)) {
+      errors.bankAccountNumber = "Account number must be 8 to 20 characters.";
+    }
+
+    const ifscCode = cleanText(data.ifscCode);
+    if (ifscCode && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifscCode.toUpperCase())) {
+      errors.ifscCode = "IFSC should be 11 characters such as ABCD0123456.";
+    }
+
+    const uanNumber = cleanText(data.uanNumber);
+    if (uanNumber && !/^\d{10}$/.test(uanNumber)) {
+      errors.uanNumber = "UAN must be exactly 10 digits.";
+    }
+
+    const pfNumber = cleanText(data.pfNumber);
+    if (pfNumber && !/^[A-Za-z0-9]{22}$/.test(pfNumber)) {
+      errors.pfNumber = "PF account number must be exactly 22 alphanumeric characters.";
+    }
+
+    return errors;
+  };
+
   const fetchProfile = async () => {
     try {
       const response = await fetch("/api/auth/me", {
@@ -197,8 +506,12 @@ export default function EmployeeProfile() {
 
       if (response.ok) {
         const data = await response.json();
-        setProfile(data.user);
-        setEditData(data.user);
+        const normalizedUser = {
+          ...data.user,
+          name: getDisplayName(data.user),
+        };
+        setProfile(normalizedUser);
+        setEditData(normalizedUser);
       } else {
         if (response.status === 401) {
           router.push("/login");
@@ -247,19 +560,47 @@ export default function EmployeeProfile() {
   };
 
   const handleEditChange = (key: string, value: any) => {
-    setEditData((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
+    setEditData((prev) => {
+      const updated = {
+        ...prev,
+        [key]: value,
+      };
+
+      setValidationErrors(validateProfileData(updated));
+      return updated;
+    });
   };
 
   const handleSave = async () => {
     // password validation
     if (newPassword || confirmPassword) {
+      if (newPassword.length < 8) {
+        setPasswordError("Password must be at least 8 characters long.");
+        setMessage({ type: "error", text: "Password must be at least 8 characters long." });
+        return;
+      }
+
+      if (!/[A-Za-z]/.test(newPassword) || !/\d/.test(newPassword)) {
+        setPasswordError("Password must include both letters and numbers.");
+        setMessage({ type: "error", text: "Password must include both letters and numbers." });
+        return;
+      }
+
       if (newPassword !== confirmPassword) {
+        setPasswordError("Passwords do not match.");
         setMessage({ type: "error", text: "Passwords do not match" });
         return;
       }
+    } else {
+      setPasswordError(null);
+    }
+
+    const validationResult = validateProfileData(editData);
+    setValidationErrors(validationResult);
+
+    if (Object.keys(validationResult).length > 0) {
+      setMessage({ type: "error", text: "Please fix the highlighted fields before saving." });
+      return;
     }
 
     setIsSaving(true);
@@ -282,13 +623,19 @@ export default function EmployeeProfile() {
 
       if (response.ok) {
         const updated = await response.json();
-        setProfile(updated);
+        const normalizedUser = {
+          ...updated,
+          name: getDisplayName(updated),
+        };
+        setProfile(normalizedUser);
         setIsEditing(false);
         // clear password states
         setNewPassword("");
         setConfirmPassword("");
         setShowPassword(false);
         setShowConfirmPassword(false);
+        setPasswordError(null);
+        setValidationErrors({});
         // clear preview
         setPreviewImage(null);
         setMessage({ type: "success", text: "Profile updated successfully!" });
@@ -308,11 +655,13 @@ export default function EmployeeProfile() {
     setEditData(profile || {});
     setIsEditing(false);
     setMessage(null);
+    setValidationErrors({});
     setPreviewImage(null);
     setNewPassword("");
     setConfirmPassword("");
     setShowPassword(false);
     setShowConfirmPassword(false);
+    setPasswordError(null);
   };
 
   const formatDate = (date: string | undefined) => {
@@ -390,6 +739,12 @@ export default function EmployeeProfile() {
             </div>
           )}
 
+          {isEditing && Object.keys(validationErrors).length > 0 && (
+            <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              Please correct the highlighted fields before saving.
+            </div>
+          )}
+
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl shadow-xl p-8 mb-8 text-white flex items-center justify-between">
             <div className="flex items-center gap-6">
@@ -431,7 +786,10 @@ export default function EmployeeProfile() {
             <div className="flex gap-2">
               {!isEditing ? (
                 <button
-                  onClick={() => setIsEditing(true)}
+                  onClick={() => {
+                    setIsEditing(true);
+                    setValidationErrors({});
+                  }}
                   className="bg-white/30 hover:bg-white/40 text-white font-semibold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors"
                 >
                   <Edit2 size={18} />
@@ -473,7 +831,18 @@ export default function EmployeeProfile() {
                   <input
                     type={showPassword ? "text" : "password"}
                     value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
+                    onChange={(e) => {
+                      setNewPassword(e.target.value);
+                      if (!e.target.value) {
+                        setPasswordError(null);
+                      } else if (e.target.value.length < 8) {
+                        setPasswordError("Password must be at least 8 characters long.");
+                      } else if (!/[A-Za-z]/.test(e.target.value) || !/\d/.test(e.target.value)) {
+                        setPasswordError("Password must include both letters and numbers.");
+                      } else {
+                        setPasswordError(null);
+                      }
+                    }}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2"
                     placeholder="Enter new password"
                   />
@@ -484,6 +853,7 @@ export default function EmployeeProfile() {
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
+                  {passwordError && <p className="mt-2 text-sm text-red-600">{passwordError}</p>}
                 </div>
                 <div className="relative">
                   <label className="block text-gray-600 font-semibold mb-2">Confirm Password</label>
@@ -516,9 +886,43 @@ export default function EmployeeProfile() {
                 { label: "Middle Name", key: "middleName", value: profile.middleName },
                 { label: "Last Name", key: "lastName", value: profile.lastName },
                 { label: "Date of Birth", key: "dateOfBirth", value: formatDate(profile.dateOfBirth), format: "date" },
-                { label: "Gender", key: "gender", value: profile.gender },
-                { label: "Blood Group", key: "bloodGroup", value: profile.bloodGroup },
-                { label: "Marital Status", key: "maritalStatus", value: profile.maritalStatus },
+                {
+                  label: "Gender",
+                  key: "gender",
+                  value: profile.gender,
+                  format: "select",
+                  options: [
+                    { label: "Male", value: "Male" },
+                    { label: "Female", value: "Female" },
+                    { label: "Other", value: "Other" },
+                  ],
+                },
+                {
+                  label: "Blood Group",
+                  key: "bloodGroup",
+                  value: profile.bloodGroup,
+                  format: "select",
+                  options: [
+                    { label: "A+", value: "A+" },
+                    { label: "A-", value: "A-" },
+                    { label: "B+", value: "B+" },
+                    { label: "B-", value: "B-" },
+                    { label: "AB+", value: "AB+" },
+                    { label: "AB-", value: "AB-" },
+                    { label: "O+", value: "O+" },
+                    { label: "O-", value: "O-" },
+                  ],
+                },
+                {
+                  label: "Marital Status",
+                  key: "maritalStatus",
+                  value: profile.maritalStatus,
+                  format: "select",
+                  options: [
+                    { label: "Single", value: "Single" },
+                    { label: "Married", value: "Married" },
+                  ],
+                },
                 { label: "Date of Marriage", key: "dateOfMarriage", value: formatDate(profile.dateOfMarriage), format: "date" },
                 { label: "Father Name", key: "fatherName", value: profile.fatherName },
                 { label: "Mother Name", key: "motherName", value: profile.motherName },
@@ -527,6 +931,7 @@ export default function EmployeeProfile() {
               isEditing={isEditing}
               editData={editData}
               onEditChange={handleEditChange}
+              validationErrors={validationErrors}
             />
           </div>
 
@@ -547,6 +952,7 @@ export default function EmployeeProfile() {
               isEditing={isEditing}
               editData={editData}
               onEditChange={handleEditChange}
+              validationErrors={validationErrors}
             />
           </div>
 
@@ -568,6 +974,7 @@ export default function EmployeeProfile() {
               isEditing={isEditing}
               editData={editData}
               onEditChange={handleEditChange}
+              validationErrors={validationErrors}
             />
           </div>
 
@@ -593,6 +1000,7 @@ export default function EmployeeProfile() {
               isEditing={isEditing}
               editData={editData}
               onEditChange={handleEditChange}
+              validationErrors={validationErrors}
             />
           </div>
 
@@ -608,6 +1016,7 @@ export default function EmployeeProfile() {
               isEditing={isEditing}
               editData={editData}
               onEditChange={handleEditChange}
+              validationErrors={validationErrors}
             />
           </div>
 
@@ -628,6 +1037,7 @@ export default function EmployeeProfile() {
               isEditing={isEditing}
               editData={editData}
               onEditChange={handleEditChange}
+              validationErrors={validationErrors}
             />
           </div>
 
@@ -645,6 +1055,7 @@ export default function EmployeeProfile() {
               isEditing={isEditing}
               editData={editData}
               onEditChange={handleEditChange}
+              validationErrors={validationErrors}
             />
           </div>
 
